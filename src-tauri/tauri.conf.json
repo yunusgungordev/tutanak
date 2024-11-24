@@ -1,0 +1,83 @@
+{
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist",
+    "withGlobalTauri": false
+  },
+  "package": {
+    "productName": "tutanak"
+  },
+  "tauri": {
+    "bundle": {
+      "active": true,
+      "category": "DeveloperTool",
+      "copyright": "",
+      "deb": {
+        "depends": []
+      },
+      "externalBin": [],
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.icns",
+        "icons/icon.ico"
+      ],
+      "identifier": "com.yourname.dev",
+      "longDescription": "",
+      "macOS": {
+        "entitlements": null,
+        "exceptionDomain": "",
+        "frameworks": [],
+        "providerShortName": null,
+        "signingIdentity": null
+      },
+      "resources": [],
+      "shortDescription": "",
+      "targets": "all",
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": "",
+        "nsis": {
+          "installerIcon": "./icons/icon.ico"
+        }
+      }
+    },
+    "security": {
+      "csp": null,
+      "dangerousRemoteDomainIpcAccess": [
+        {
+          "scheme": "https",
+          "domain": "tauri.localhost",
+          "windows": [
+            "main"
+          ],
+          "plugins": [
+            "app",
+            "os",
+            "shell",
+            "window",
+            "event"
+          ]
+        }
+      ]
+    },
+    "windows": [
+      {
+        "decorations": true,
+        "fullscreen": false,
+        "height": 630,
+        "minHeight": 630,
+        "center": true,
+        "resizable": true,
+        "title": "Tutanak",
+        "width": 800,
+        "transparent": false,
+        "titleBarStyle": "Visible"
+      }
+    ]
+  }
+}
