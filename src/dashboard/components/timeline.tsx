@@ -236,12 +236,12 @@ export function Timeline() {
                 </div>
               </div>
 
-              <div className="absolute bottom-0 left-0 w-full p-1 border-t bg-background/50 backdrop-blur-sm">
-                <div className="flex items-center justify-center gap-1">
-                  <span className="text-xs font-medium">
+              <div className="absolute bottom-0 left-0 w-full p-2 border-t bg-background/50 backdrop-blur-sm">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-sm font-medium">
                     {format(date, "d MMM", { locale: tr })}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-sm text-muted-foreground">
                     {format(date, "EEEE", { locale: tr })}
                   </span>
                 </div>
