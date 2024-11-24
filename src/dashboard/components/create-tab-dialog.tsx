@@ -138,14 +138,26 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
     }
 
     try {
+      // Layout verilerini normalize et
+      const normalizedLayout = layout.map(item => ({
+        ...item,
+        properties: {
+          ...item.properties,
+          x: Math.round(item.properties.x),
+          y: Math.round(item.properties.y),
+          width: Math.round(item.properties.width),
+          height: Math.round(item.properties.height)
+        }
+      }))
+
       const success = await saveDynamicTab({
         id: crypto.randomUUID(),
         label,
         type: 'dynamic',
-        layout,
+        layout: normalizedLayout,
         database: {
           tableName: label.toLowerCase().replace(/\s+/g, "_"),
-          fields: layout.map(item => ({
+          fields: normalizedLayout.map(item => ({
             name: item.properties.label || "",
             type: item.type === "input" || item.type === "textarea" ? "text" : 
                   item.type === "checkbox" ? "boolean" : "text"

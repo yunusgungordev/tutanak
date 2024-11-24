@@ -49,17 +49,17 @@ export default function DashboardPage() {
         <div className="flex flex-col h-screen p-2">
           <div className="flex-1 flex flex-col bg-background">
             <div className={cn(
-              "transition-all duration-300 flex-1",
-              isMinimized ? "h-[calc(100vh-74px)]" : "h-[50vh]"
+              "transition-all duration-300",
+              isMinimized ? "h-[calc(100vh-74px)]" : "h-[calc(50vh)]"
             )}>
-              <div className="h-full">
+              <div className="h-full overflow-hidden">
                 <div className="flex h-full">
                   <div className="w-48 shrink-0">
                     <TabBar />
                   </div>
 
-                  <div className="flex-1 overflow-x-auto">
-                    <div className="min-w-[1000px] h-full">
+                  <div className="flex-1 overflow-hidden">
+                    <div className="min-w-[1000px] h-full overflow-auto">
                       <TabContent />
                     </div>
                   </div>
@@ -68,8 +68,8 @@ export default function DashboardPage() {
             </div>
 
             <div className={cn(
-              "transition-all duration-300",
-              isMinimized ? "h-[50px]" : "h-[calc(50vh-20px)]"
+              "transition-all duration-300 overflow-hidden",
+              isMinimized ? "h-12" : "h-[calc(50vh-20px)]"
             )}>
               <Timeline />
             </div>
