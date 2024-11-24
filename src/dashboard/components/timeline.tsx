@@ -149,7 +149,7 @@ export function Timeline() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between py-4 px-4 bg-background/50 backdrop-blur-sm border-b">
+      <div className="flex items-center justify-between py-2 px-2 bg-background/50 backdrop-blur-sm border-b">
         <NotificationBell />
         <div className="flex items-center gap-4">
           <Input
@@ -157,14 +157,14 @@ export function Timeline() {
             placeholder="Tarih veya kelime ile ara..."
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-[300px]"
+            className="w-[300px] h-9"
           />
           <AddNoteDialog />
         </div>
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 relative bg-white dark:bg-slate-900 overflow-hidden"
+        className="flex-1 relative bg-white overflow-hidden"
         {...bind()}
       >
         <motion.div
