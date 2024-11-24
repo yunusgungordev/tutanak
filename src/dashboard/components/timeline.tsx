@@ -171,31 +171,36 @@ export function Timeline() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          className="flex flex-col h-full"
+          className={cn(
+            "flex flex-col",
+            isMinimized ? "h-0" : "h-full"
+          )}
         >
-          <div className="flex items-center justify-between py-2 px-2 bg-background/50 backdrop-blur-sm border-b">
-            <div className="flex items-center gap-2">
-              <NotificationBell />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setIsMinimized(true)}
-              >
-                <Minimize2 className="h-4 w-4" />
-              </Button>
+          {!isMinimized && (
+            <div className="flex items-center justify-between py-2 px-2 bg-background/50 backdrop-blur-sm border-b">
+              <div className="flex items-center gap-2">
+                <NotificationBell />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setIsMinimized(true)}
+                >
+                  <Minimize2 className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-4">
+                <Input
+                  type="search"
+                  placeholder="Tarih veya kelime ile ara..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="w-[300px] h-9"
+                />
+                <AddNoteDialog />
+              </div>
             </div>
-            <div className="flex items-center gap-4">
-              <Input
-                type="search"
-                placeholder="Tarih veya kelime ile ara..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="w-[300px] h-9"
-              />
-              <AddNoteDialog />
-            </div>
-          </div>
+          )}
           
           <div 
             ref={containerRef}
