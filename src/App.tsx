@@ -1,34 +1,12 @@
-import { useState } from "react"
-import { invoke } from "@tauri-apps/api/tauri"
-
-
-import { TailwindIndicator } from "./components/tailwind-indicator"
-import { ThemeProvider } from "./components/theme-provider"
-import DashboardPage from "./dashboard/page"
-import { cn } from "./lib/utils"
+import { ThemeProvider } from "@/components/theme-provider"
+import DashboardPage from "@/dashboard/page"
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("")
-  const [name, setName] = useState("")
-
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-    setGreetMsg(await invoke("greet", { name }))
-  }
-
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <div className="flex flex-col h-screen overflow-clip">
-        <div
-          className={cn(
-            "flex-1 overflow-auto bg-background",
-            "scrollbar scrollbar-track-transparent scrollbar-thumb-accent scrollbar-thumb-rounded-md"
-          )}
-        >
-          <DashboardPage />
-        </div>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <div className="min-h-screen bg-background">
+        <DashboardPage />
       </div>
-      <TailwindIndicator />
     </ThemeProvider>
   )
 }
