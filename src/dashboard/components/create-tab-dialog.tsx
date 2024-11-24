@@ -167,7 +167,7 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl h-[800px] flex flex-col">
+      <DialogContent className="max-w-[90vw] max-h-[90vh] h-[800px] flex flex-col overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>Yeni Tab Oluştur</DialogTitle>
           <Input
@@ -216,9 +216,9 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
           </div>
 
           {/* Orta Panel - Canvas */}
-          <div className="flex-1 overflow-x-auto">
-            <div className="min-w-[1000px]">
-              <div className="m-6 border-2 border-dashed rounded-lg bg-background/50 relative min-h-[800px]"
+          <div className="flex-1 overflow-auto">
+            <div className="min-w-[800px] max-w-full p-6">
+              <div className="border-2 border-dashed rounded-lg bg-background/50 relative min-h-[800px]"
                 style={{
                   backgroundSize: "20px 20px",
                   backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)"

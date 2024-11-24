@@ -11,6 +11,7 @@ import { AddNoteDialog } from "./add-note-dialog"
 import { Button } from "@/components/ui/button"
 import { NotificationBell } from "./notification-bell"
 import { Input } from "@/components/ui/input"
+import { useTimeline } from "@/contexts/timeline-context"
 
 const HOUR_WIDTH = 100
 const MINUTE_MARK_HEIGHT = 10
@@ -36,12 +37,12 @@ function isNewYear(current: Date, prev?: Date) {
 
 export function Timeline() {
   const { notes, searchResults, searchNotes } = useNotes()
+  const { isMinimized, setIsMinimized } = useTimeline()
   const [searchQuery, setSearchQuery] = useState("")
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [dates, setDates] = useState<Date[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
   const [cellWidth, setCellWidth] = useState(window.innerWidth * 0.7)
-  const [isMinimized, setIsMinimized] = useState(false)
 
   useEffect(() => {
     const now = new Date()
@@ -171,36 +172,31 @@ export function Timeline() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          className={cn(
-            "flex flex-col",
-            isMinimized ? "h-0" : "h-full"
-          )}
+          className="h-full flex flex-col"
         >
-          {!isMinimized && (
-            <div className="flex items-center justify-between py-2 px-2 bg-background/50 backdrop-blur-sm border-b">
-              <div className="flex items-center gap-2">
-                <NotificationBell />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setIsMinimized(true)}
-                >
-                  <Minimize2 className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="flex items-center gap-4">
-                <Input
-                  type="search"
-                  placeholder="Tarih veya kelime ile ara..."
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  className="w-[300px] h-9"
-                />
-                <AddNoteDialog />
-              </div>
+          <div className="flex items-center justify-between py-2 px-2 bg-background/50 backdrop-blur-sm border-b">
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setIsMinimized(true)}
+              >
+                <Minimize2 className="h-4 w-4" />
+              </Button>
             </div>
-          )}
+            <div className="flex items-center gap-4">
+              <Input
+                type="search"
+                placeholder="Tarih veya kelime ile ara..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                className="w-[300px] h-9"
+              />
+              <AddNoteDialog />
+            </div>
+          </div>
           
           <div 
             ref={containerRef}

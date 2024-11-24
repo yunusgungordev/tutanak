@@ -6,6 +6,8 @@ import { useState } from "react"
 import { TabProvider, useTabContext } from "@/contexts/tab-context"
 import React from "react"
 import { Pencil, Trash2 } from 'lucide-react'
+import { TimelineProvider, useTimeline } from "@/contexts/timeline-context"
+import { cn } from "@/lib/utils"
 
 interface Tab {
   id: string
@@ -16,6 +18,7 @@ export default function DashboardPage() {
   const [tabs, setTabs] = useState<Tab[]>([])
   const [editingTabId, setEditingTabId] = useState<string | null>(null)
   const [editingTabName, setEditingTabName] = useState('')
+  const { isMinimized } = useTimeline()
 
   const handleEditTab = (tab: Tab) => {
     setEditingTabId(tab.id)
@@ -42,31 +45,39 @@ export default function DashboardPage() {
 
   return (
     <TabProvider>
-      <NotesProvider>
-        <div className="flex flex-col h-full p-2">
-          <div className="flex-1 flex flex-col bg-background">
-            <div className="h-[50vh]">
-              <div className="h-full">
-                <div className="flex h-full">
-                  <div className="w-48 shrink-0">
-                    <TabBar />
-                  </div>
+      <TimelineProvider>
+        <NotesProvider>
+          <div className="flex flex-col h-screen p-2">
+            <div className="flex-1 flex flex-col bg-background">
+              <div className={cn(
+                "transition-all duration-300 flex-1",
+                isMinimized ? "h-[calc(100vh-74px)]" : "h-[50vh]"
+              )}>
+                <div className="h-full">
+                  <div className="flex h-full">
+                    <div className="w-48 shrink-0">
+                      <TabBar />
+                    </div>
 
-                  <div className="flex-1 overflow-x-auto">
-                    <div className="min-w-[1000px]">
-                      <TabContent />
+                    <div className="flex-1 overflow-x-auto">
+                      <div className="min-w-[1000px] h-full">
+                        <TabContent />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="h-[50vh]">
-              <Timeline />
+              <div className={cn(
+                "transition-all duration-300",
+                isMinimized ? "h-[50px]" : "h-[calc(50vh-20px)]"
+              )}>
+                <Timeline />
+              </div>
             </div>
           </div>
-        </div>
-      </NotesProvider>
+        </NotesProvider>
+      </TimelineProvider>
     </TabProvider>
   )
 }
