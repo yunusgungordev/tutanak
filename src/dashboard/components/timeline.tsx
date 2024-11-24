@@ -150,18 +150,18 @@ export function Timeline() {
   }
 
   return (
-    <AnimatePresence>
+    <div className="h-full flex flex-col">
       {isMinimized ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.8 }}
-          className="fixed bottom-4 right-4 z-50"
+          className="fixed bottom-4 right-4 z-50 bg-background"
         >
           <Button
             variant="outline"
             size="icon"
-            className="h-10 w-10 rounded-full shadow-lg bg-background hover:bg-accent"
+            className="h-10 w-10 rounded-full shadow-lg hover:bg-accent"
             onClick={() => setIsMinimized(false)}
           >
             <Maximize2 className="h-4 w-4" />
@@ -288,6 +288,6 @@ export function Timeline() {
           </div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </div>
   )
 }

@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTabContext } from "@/contexts/tab-context";
 import { invoke } from "@tauri-apps/api/tauri";
+import { TimelineProvider } from "@/contexts/timeline-context"
 
 interface DynamicTabRendererProps {
   label: string;
@@ -45,46 +46,48 @@ export const DynamicTabRenderer: React.FC<DynamicTabRendererProps> = ({ label })
     switch (item.type) {
       case 'input':
         return (
-          <div className="w-full">
+          <div className="w-full h-full">
             <label className="block text-sm font-medium mb-1">{item.properties.label}</label>
             <input
               type="text"
               placeholder={item.properties.placeholder}
-              className="w-full px-3 py-2 border rounded-md"
+              className="w-full h-[calc(100%-24px)] px-3 py-2 border rounded-md"
             />
           </div>
         );
       case 'button':
         return (
-          <button className="px-4 py-2 bg-primary text-primary-foreground rounded-md">
+          <button className="w-full h-full px-4 py-2 bg-primary text-primary-foreground rounded-md">
             {item.properties.label}
           </button>
         );
-      // Diğer bileşen tipleri...
+      case 'textarea':
+        return (
+          <div className="w-full h-full">
+            <label className="block text-sm font-medium mb-1">{item.properties.label}</label>
+            <textarea
+              placeholder={item.properties.placeholder}
+              className="w-full h-[calc(100%-24px)] px-3 py-2 border rounded-md resize-none"
+            />
+          </div>
+        );
       default:
         return null;
     }
   };
 
   return (
-    <div className="h-full w-full overflow-x-auto bg-background">
-      <div className="min-w-[1000px] p-6">
-        <div 
-          className="relative min-h-[800px] border rounded-lg"
-          style={{
-            backgroundSize: "20px 20px",
-            backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)"
-          }}
-        >
-          {layout.map((item) => (
+    <TimelineProvider>
+      <div className="relative w-full h-full p-4">
+        <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+          {layout.map((item: any) => (
             <div
               key={item.id}
-              className="absolute bg-background border rounded-md shadow-sm p-4"
+              className="relative"
               style={{
-                left: `${item.properties.x}px`,
-                top: `${item.properties.y}px`,
-                width: `${item.properties.width}px`,
-                minHeight: `${item.properties.height}px`,
+                width: item.properties.width,
+                height: item.properties.height,
+                transform: `translate(${item.properties.x}px, ${item.properties.y}px)`,
               }}
             >
               {renderComponent(item)}
@@ -92,6 +95,6 @@ export const DynamicTabRenderer: React.FC<DynamicTabRendererProps> = ({ label })
           ))}
         </div>
       </div>
-    </div>
+    </TimelineProvider>
   );
 }; 
