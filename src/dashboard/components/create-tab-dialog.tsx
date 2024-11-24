@@ -3,11 +3,12 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DraggableComponentType } from "@/types/component"
-import { LayoutConfig, DynamicTabConfig } from "@/types/tab"
+import { LayoutConfig, DynamicTabConfig, Field } from "@/types/tab"
 import { FormInput as InputIcon, Type, Table, ListTodo, Square, Trash2, GripVertical } from "lucide-react"
 import { useTabContext } from "@/contexts/tab-context"
 import { toast } from "react-hot-toast"
 import { cn } from "@/lib/utils"
+import { ModelPanel } from "./model-panel"
 
 const COMPONENTS: DraggableComponentType[] = [
   {
@@ -86,6 +87,7 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
   const [label, setLabel] = useState("")
   const [selectedItem, setSelectedItem] = useState<string | null>(null)
   const { addDynamicTab, saveDynamicTab } = useTabContext()
+  const [fields, setFields] = useState<Field[]>([])
 
   const handleAddComponent = (component: DraggableComponentType) => {
     const newLayoutItem: LayoutConfig = {
@@ -179,14 +181,7 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
           <div className="flex-1 flex gap-0 min-h-0">
             {/* Sol Panel - Veritabanı Modeli */}
             <div className="w-[250px] border-r bg-muted/10">
-              <div className="p-4 border-b bg-muted/30">
-                <h3 className="font-medium">Model</h3>
-              </div>
-              <div className="p-4">
-                <div className="space-y-4">
-                  {/* Veritabanı ayarları buraya gelecek */}
-                </div>
-              </div>
+              <ModelPanel onFieldsChange={setFields} />
             </div>
 
             {/* Sağ Panel - Bileşenler ve Canvas */}
