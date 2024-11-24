@@ -242,86 +242,108 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
   ]
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-[500px]">
       <div className="p-4 border-b bg-muted/30">
-        <div className="flex items-center justify-between">
-          <h3 className="font-medium">Veritabanı Modeli</h3>
-          <Button variant="ghost" size="sm" onClick={addField}>
-            <Plus className="w-4 h-4 mr-2" />
-            Alan Ekle
-          </Button>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium">Model</h3>
+            <Button variant="ghost" size="sm" onClick={addField}>
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+          <Select
+            onValueChange={(template) => {
+              const selectedTemplate = fieldTemplates.find(t => t.name === template)
+              if (selectedTemplate) {
+                setFields([...fields, { ...selectedTemplate }])
+              }
+            }}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Şablon seç" />
+            </SelectTrigger>
+            <SelectContent>
+              {fieldTemplates.map(template => (
+                <SelectItem key={template.name} value={template.name}>
+                  {template.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
-        <DragDropContext
-          onDragEnd={(result) => {
-            if (!result.destination) return
-            
-            const items = reorderFields(
-              fields,
-              result.source.index,
-              result.destination.index
-            )
-            setFields(items)
-            onFieldsChange(items)
-          }}
-        >
-          <Droppable droppableId="fields">
-            {(provided) => (
-              <div {...provided.droppableProps} ref={provided.innerRef}>
-                {fields.map((field, index) => (
-                  <Draggable key={field.name} draggableId={field.name} index={index}>
-                    {(provided) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        className="mb-2"
-                      >
-                        <div className="flex items-center gap-2 p-3 border rounded-md bg-card">
-                          <div {...provided.dragHandleProps}>
-                            <GripVertical className="w-4 h-4 text-muted-foreground" />
-                          </div>
-                          <div className="flex-1 space-y-2">
-                            <Input
-                              placeholder="Alan adı"
-                              value={field.name}
-                              onChange={(e) => updateField(index, { name: e.target.value })}
-                              className="h-8"
-                            />
-                            <TypeSettings 
-                              field={field} 
-                              index={index} 
-                              onUpdate={(index, updates) => updateField(index, updates)} 
-                            />
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={field.required}
-                                onChange={(e) => updateField(index, { required: e.target.checked })}
-                                className="rounded border-gray-300"
-                              />
-                              <span className="text-sm text-muted-foreground">Zorunlu alan</span>
+      <ScrollArea className="flex-1">
+        <div className="p-4">
+          <DragDropContext
+            onDragEnd={(result) => {
+              if (!result.destination) return
+              
+              const items = reorderFields(
+                fields,
+                result.source.index,
+                result.destination.index
+              )
+              setFields(items)
+              onFieldsChange(items)
+            }}
+          >
+            <Droppable droppableId="fields">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef}>
+                  {fields.map((field, index) => (
+                    <Draggable key={field.name || index} draggableId={field.name || `field-${index}`} index={index}>
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className="mb-2"
+                        >
+                          <div className="flex items-center gap-2 p-3 border rounded-md bg-card">
+                            <div {...provided.dragHandleProps}>
+                              <GripVertical className="w-4 h-4 text-muted-foreground" />
                             </div>
+                            <div className="flex-1 space-y-2">
+                              <Input
+                                placeholder="Alan adı"
+                                value={field.name}
+                                onChange={(e) => updateField(index, { name: e.target.value })}
+                                className="h-8"
+                              />
+                              <TypeSettings 
+                                field={field} 
+                                index={index} 
+                                onUpdate={(index, updates) => updateField(index, updates)} 
+                              />
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={field.required}
+                                  onChange={(e) => updateField(index, { required: e.target.checked })}
+                                  className="rounded border-gray-300"
+                                />
+                                <span className="text-sm text-muted-foreground">Zorunlu alan</span>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeField(index)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeField(index)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
                         </div>
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+        </div>
       </ScrollArea>
     </div>
   )
