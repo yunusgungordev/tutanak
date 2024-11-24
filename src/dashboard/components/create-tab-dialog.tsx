@@ -180,13 +180,13 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
 
         <div className="flex-1 min-h-0 flex">
           {/* Sol Panel - Model ve Bileşenler */}
-          <div className="w-[250px] border-r flex flex-col overflow-auto">
+          <div className="w-[300px] border-r flex flex-col overflow-auto">
             <Collapsible defaultOpen={false}>
               <CollapsibleTrigger className="flex w-full items-center justify-between p-4 bg-muted/30 sticky top-0 z-10">
                 <h3 className="font-medium">Model</h3>
                 <ChevronDown className="h-4 w-4 transition-transform duration-200" />
               </CollapsibleTrigger>
-              <CollapsibleContent>
+              <CollapsibleContent className="max-h-[200px] overflow-auto">
                 <div className="p-4">
                   <ModelPanel onFieldsChange={(fields) => setFields(fields)} />
                 </div>
@@ -216,91 +216,93 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
           </div>
 
           {/* Orta Panel - Canvas */}
-          <div className="flex-1 overflow-auto">
-            <div className="min-w-[1200px] min-h-[800px] m-6 border-2 border-dashed rounded-lg bg-background/50 relative"
-              style={{
-                backgroundSize: "20px 20px",
-                backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)"
-              }}
-            >
-              {layout.map((item) => (
-                <div
-                  key={item.id}
-                  onClick={() => handleItemClick(item.id)}
-                  style={{
-                    position: "absolute",
-                    left: item.properties.x,
-                    top: item.properties.y,
-                    width: item.properties.width,
-                    height: item.properties.height,
-                    cursor: "pointer",
-                  }}
-                  className={cn(
-                    "border rounded-md bg-background p-2",
-                    selectedItem === item.id && "ring-2 ring-primary"
-                  )}
-                >
-                  <div className="absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className="p-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium">{item.properties.label}</span>
-                      {selectedItem === item.id && (
+          <div className="flex-1 overflow-x-auto">
+            <div className="min-w-[1000px]">
+              <div className="m-6 border-2 border-dashed rounded-lg bg-background/50 relative min-h-[800px]"
+                style={{
+                  backgroundSize: "20px 20px",
+                  backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)"
+                }}
+              >
+                {layout.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleItemClick(item.id)}
+                    style={{
+                      position: "absolute",
+                      left: item.properties.x,
+                      top: item.properties.y,
+                      width: item.properties.width,
+                      height: item.properties.height,
+                      cursor: "pointer",
+                    }}
+                    className={cn(
+                      "border rounded-md bg-background p-2",
+                      selectedItem === item.id && "ring-2 ring-primary"
+                    )}
+                  >
+                    <div className="absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <GripVertical className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="p-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium">{item.properties.label}</span>
+                        {selectedItem === item.id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleItemDelete(item.id)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      {/* Bileşen içeriği */}
+                      {item.type === "input" && (
+                        <input
+                          type="text"
+                          placeholder={item.properties.placeholder}
+                          className="w-full px-2 py-1 border rounded bg-muted/50"
+                          disabled
+                        />
+                      )}
+                      {item.type === "textarea" && (
+                        <textarea
+                          placeholder={item.properties.placeholder}
+                          className="w-full px-2 py-1 border rounded bg-muted/50"
+                          disabled
+                        />
+                      )}
+                      {item.type === "select" && (
+                        <select className="w-full px-2 py-1 border rounded bg-muted/50" disabled>
+                          {item.properties.options?.map((option, i) => (
+                            <option key={i}>{option}</option>
+                          ))}
+                        </select>
+                      )}
+                      {item.type === "button" && (
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleItemDelete(item.id)
-                          }}
+                          variant="secondary"
+                          className="w-full"
+                          disabled
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {item.properties.label}
                         </Button>
                       )}
+                      {item.type === "checkbox" && (
+                        <div className="flex items-center gap-2">
+                          <input type="checkbox" disabled />
+                          <span className="text-sm">{item.properties.label}</span>
+                        </div>
+                      )}
                     </div>
-                    {/* Bileşen içeriği */}
-                    {item.type === "input" && (
-                      <input
-                        type="text"
-                        placeholder={item.properties.placeholder}
-                        className="w-full px-2 py-1 border rounded bg-muted/50"
-                        disabled
-                      />
-                    )}
-                    {item.type === "textarea" && (
-                      <textarea
-                        placeholder={item.properties.placeholder}
-                        className="w-full px-2 py-1 border rounded bg-muted/50"
-                        disabled
-                      />
-                    )}
-                    {item.type === "select" && (
-                      <select className="w-full px-2 py-1 border rounded bg-muted/50" disabled>
-                        {item.properties.options?.map((option, i) => (
-                          <option key={i}>{option}</option>
-                        ))}
-                      </select>
-                    )}
-                    {item.type === "button" && (
-                      <Button
-                        variant="secondary"
-                        className="w-full"
-                        disabled
-                      >
-                        {item.properties.label}
-                      </Button>
-                    )}
-                    {item.type === "checkbox" && (
-                      <div className="flex items-center gap-2">
-                        <input type="checkbox" disabled />
-                        <span className="text-sm">{item.properties.label}</span>
-                      </div>
-                    )}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 
