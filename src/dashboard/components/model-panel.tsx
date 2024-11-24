@@ -2,9 +2,10 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, GripVertical } from "lucide-react"
+import { Plus, Trash2, GripVertical, ChevronDown, ChevronUp } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 interface FieldOptions {
   minLength?: number
@@ -82,74 +83,93 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
     index: number
     onUpdate: (index: number, updates: Partial<Field>) => void 
   }) => {
-    const renderTypeOptions = () => {
+    const [isOpen, setIsOpen] = useState(false)
+
+    const renderAdvancedOptions = () => {
       switch (field.type) {
         case "text":
           return (
-            <div className="space-y-2">
-              <div className="flex gap-2">
+            <div className="space-y-2 pt-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-muted-foreground">Min Uzunluk</label>
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={field.options?.minLength || ""}
+                    onChange={(e) => onUpdate(index, { 
+                      options: { 
+                        ...field.options, 
+                        minLength: parseInt(e.target.value) || undefined 
+                      } 
+                    })}
+                    className="h-7"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Max Uzunluk</label>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={field.options?.maxLength || ""}
+                    onChange={(e) => onUpdate(index, { 
+                      options: { 
+                        ...field.options, 
+                        maxLength: parseInt(e.target.value) || undefined 
+                      } 
+                    })}
+                    className="h-7"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Regex Pattern</label>
                 <Input
-                  type="number"
-                  placeholder="Min uzunluk"
-                  value={field.options?.minLength || ""}
+                  placeholder="örn: ^[0-9]+$"
+                  value={field.options?.pattern || ""}
                   onChange={(e) => onUpdate(index, { 
-                    options: { 
-                      ...field.options, 
-                      minLength: parseInt(e.target.value) || undefined 
-                    } 
+                    options: { ...field.options, pattern: e.target.value } 
                   })}
-                  className="h-8"
-                />
-                <Input
-                  type="number"
-                  placeholder="Max uzunluk"
-                  value={field.options?.maxLength || ""}
-                  onChange={(e) => onUpdate(index, { 
-                    options: { 
-                      ...field.options, 
-                      maxLength: parseInt(e.target.value) || undefined 
-                    } 
-                  })}
-                  className="h-8"
+                  className="h-7"
                 />
               </div>
-              <Input
-                placeholder="Regex pattern"
-                value={field.options?.pattern || ""}
-                onChange={(e) => onUpdate(index, { 
-                  options: { ...field.options, pattern: e.target.value } 
-                })}
-                className="h-8"
-              />
             </div>
           )
         case "number":
           return (
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                placeholder="Min değer"
-                value={field.options?.min || ""}
-                onChange={(e) => onUpdate(index, { 
-                  options: { 
-                    ...field.options, 
-                    min: parseInt(e.target.value) || undefined 
-                  } 
-                })}
-                className="h-8"
-              />
-              <Input
-                type="number"
-                placeholder="Max değer"
-                value={field.options?.max || ""}
-                onChange={(e) => onUpdate(index, { 
-                  options: { 
-                    ...field.options, 
-                    max: parseInt(e.target.value) || undefined 
-                  } 
-                })}
-                className="h-8"
-              />
+            <div className="space-y-2 pt-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-muted-foreground">Min Değer</label>
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={field.options?.min || ""}
+                    onChange={(e) => onUpdate(index, { 
+                      options: { 
+                        ...field.options, 
+                        min: parseInt(e.target.value) || undefined 
+                      } 
+                    })}
+                    className="h-7"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">Max Değer</label>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={field.options?.max || ""}
+                    onChange={(e) => onUpdate(index, { 
+                      options: { 
+                        ...field.options, 
+                        max: parseInt(e.target.value) || undefined 
+                      } 
+                    })}
+                    className="h-7"
+                  />
+                </div>
+              </div>
             </div>
           )
         default:
@@ -159,21 +179,33 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
 
     return (
       <div className="space-y-2">
-        <Select
-          value={field.type}
-          onValueChange={(value) => onUpdate(index, { type: value })}
-        >
-          <SelectTrigger className="h-8">
-            <SelectValue placeholder="Tip seçin" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="text">Metin</SelectItem>
-            <SelectItem value="number">Sayı</SelectItem>
-            <SelectItem value="date">Tarih</SelectItem>
-            <SelectItem value="boolean">Evet/Hayır</SelectItem>
-          </SelectContent>
-        </Select>
-        {renderTypeOptions()}
+        <div className="flex gap-2">
+          <Select
+            value={field.type}
+            onValueChange={(value) => onUpdate(index, { type: value })}
+          >
+            <SelectTrigger className="h-8 flex-1">
+              <SelectValue placeholder="Tip seçin" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="text">Metin</SelectItem>
+              <SelectItem value="number">Sayı</SelectItem>
+              <SelectItem value="date">Tarih</SelectItem>
+              <SelectItem value="boolean">Evet/Hayır</SelectItem>
+            </SelectContent>
+          </Select>
+          {(field.type === "text" || field.type === "number") && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-8 px-2"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          )}
+        </div>
+        {isOpen && (field.type === "text" || field.type === "number") && renderAdvancedOptions()}
       </div>
     )
   }
