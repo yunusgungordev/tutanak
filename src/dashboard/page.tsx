@@ -12,8 +12,8 @@ export default function DashboardPage() {
       <NotesProvider>
         <div className="flex flex-col h-full p-2">
           <div className="flex-1 flex flex-col bg-background">
-            <div className="flex-1">
-              <div className="mx-auto h-full">
+            <div className="h-[50vh]">
+              <div className="h-full">
                 <div className="flex h-full">
                   <div className="w-48 shrink-0">
                     <TabBar />
@@ -26,7 +26,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="h-[350px]">
+            <div className="h-[50vh]">
               <Timeline />
             </div>
           </div>
