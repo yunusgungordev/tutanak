@@ -35,6 +35,8 @@ interface TabContextType {
   saveDynamicTab: (config: DynamicTabConfig) => Promise<boolean>
   updateDynamicTab: (id: string, config: Partial<DynamicTabConfig>) => void
   setActiveTab: (tab: TabContent) => void
+  removeTab: (tabId: string) => void
+  updateTab: (tabId: string, newLabel: string) => void
 }
 
 const TabContext = createContext<TabContextType | undefined>(undefined)
@@ -121,6 +123,24 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
     ))
   }
 
+  const removeTab = (tabId: string) => {
+    setTabs((prevTabs) => {
+      const newTabs = prevTabs.filter((tab) => tab.id !== tabId)
+      if (activeTab.id === tabId && newTabs.length > 0) {
+        setActiveTab(newTabs[0])
+      }
+      return newTabs
+    })
+  }
+
+  const updateTab = (tabId: string, newLabel: string) => {
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) =>
+        tab.id === tabId ? { ...tab, label: newLabel } : tab
+      )
+    )
+  }
+
   return (
     <TabContext.Provider value={{ 
       tabs, 
@@ -128,7 +148,9 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
       addDynamicTab, 
       saveDynamicTab, 
       updateDynamicTab,
-      setActiveTab 
+      setActiveTab,
+      removeTab,
+      updateTab
     }}>
       {children}
     </TabContext.Provider>

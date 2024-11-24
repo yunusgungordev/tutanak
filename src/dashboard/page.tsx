@@ -5,8 +5,41 @@ import { TabBar } from "@/dashboard/components/tab-bar"
 import { useState } from "react"
 import { TabProvider, useTabContext } from "@/contexts/tab-context"
 import React from "react"
+import { Pencil, Trash2 } from 'lucide-react'
+
+interface Tab {
+  id: string
+  name: string
+}
 
 export default function DashboardPage() {
+  const [tabs, setTabs] = useState<Tab[]>([])
+  const [editingTabId, setEditingTabId] = useState<string | null>(null)
+  const [editingTabName, setEditingTabName] = useState('')
+
+  const handleEditTab = (tab: Tab) => {
+    setEditingTabId(tab.id)
+    setEditingTabName(tab.name)
+  }
+
+  const handleUpdateTab = () => {
+    if (!editingTabName.trim()) return
+
+    setTabs(prevTabs =>
+      prevTabs.map(tab =>
+        tab.id === editingTabId
+          ? { ...tab, name: editingTabName.trim() }
+          : tab
+      )
+    )
+    setEditingTabId(null)
+    setEditingTabName('')
+  }
+
+  const handleDeleteTab = (tabId: string) => {
+    setTabs(prevTabs => prevTabs.filter(tab => tab.id !== tabId))
+  }
+
   return (
     <TabProvider>
       <NotesProvider>
