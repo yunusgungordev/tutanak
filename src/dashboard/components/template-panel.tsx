@@ -147,7 +147,17 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
       </div>
       
       <div className="flex-1 overflow-auto">
-        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-450px)] p-2">
+        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-450px)] p-2 
+          [&::-webkit-scrollbar]:w-2 
+          [&::-webkit-scrollbar-track]:bg-gray-100 
+          [&::-webkit-scrollbar-track]:rounded-lg
+          [&::-webkit-scrollbar-thumb]:bg-gray-300 
+          [&::-webkit-scrollbar-thumb]:rounded-lg
+          [&::-webkit-scrollbar-thumb:hover]:bg-gray-400
+          scrollbar-thin 
+          scrollbar-track-gray-100 
+          scrollbar-thumb-gray-300
+          hover:scrollbar-thumb-gray-400">
           {filteredTemplates.map(template => (
             <Card
               key={template.id}
