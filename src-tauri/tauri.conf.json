@@ -69,12 +69,12 @@
       {
         "decorations": true,
         "fullscreen": false,
-        "height": 630,
+        "height": 670,
         "minHeight": 630,
         "center": true,
         "resizable": true,
         "title": "Tutanak",
-        "width": 800,
+        "width": 1100,
         "transparent": false,
         "titleBarStyle": "Visible"
       }
