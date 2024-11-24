@@ -9,6 +9,8 @@ import { useTabContext } from "@/contexts/tab-context"
 import { toast } from "react-hot-toast"
 import { cn } from "@/lib/utils"
 import { ModelPanel } from "./model-panel"
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible"
+import { ChevronDown } from "lucide-react"
 
 const COMPONENTS: DraggableComponentType[] = [
   {
@@ -165,206 +167,210 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] max-h-[90vh] p-0">
-        <div className="flex flex-col h-full">
-          <DialogHeader className="px-6 py-4 border-b">
-            <DialogTitle>Yeni Tab Oluştur</DialogTitle>
-            <div className="mt-2">
-              <Input
-                placeholder="Tab Başlığı"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-              />
-            </div>
-          </DialogHeader>
+      <DialogContent className="max-w-6xl h-[800px] flex flex-col">
+        <DialogHeader className="px-6 py-4 border-b">
+          <DialogTitle>Yeni Tab Oluştur</DialogTitle>
+          <Input
+            placeholder="Tab Başlığı"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="mt-4"
+          />
+        </DialogHeader>
 
-          <div className="flex-1 flex gap-0 min-h-0">
-            {/* Sol Panel - Veritabanı Modeli */}
-            <div className="w-[250px] border-r bg-muted/10">
-              <ModelPanel onFieldsChange={setFields} />
-            </div>
-
-            {/* Sağ Panel - Bileşenler ve Canvas */}
-            <div className="flex-1 flex min-w-0">
-              {/* Bileşenler Listesi */}
-              <div className="w-[200px] border-r bg-muted/10">
-                <div className="p-4 border-b bg-muted/30">
-                  <h3 className="font-medium">Bileşenler</h3>
-                </div>
+        <div className="flex-1 min-h-0 flex">
+          {/* Sol Panel - Model ve Bileşenler */}
+          <div className="w-[250px] border-r flex flex-col overflow-auto">
+            <Collapsible defaultOpen={false}>
+              <CollapsibleTrigger className="flex w-full items-center justify-between p-4 bg-muted/30 sticky top-0 z-10">
+                <h3 className="font-medium">Model</h3>
+                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
                 <div className="p-4">
-                  <div className="space-y-2">
-                    {COMPONENTS.map((component) => (
-                      <div
-                        key={component.id}
-                        onClick={() => handleAddComponent(component)}
-                        className="flex items-center gap-2 p-2 border rounded-md cursor-pointer bg-card hover:bg-accent hover:text-accent-foreground"
-                      >
-                        {component.icon}
-                        <span className="text-sm">{component.label}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <ModelPanel onFieldsChange={(fields) => setFields(fields)} />
                 </div>
-              </div>
-
-              {/* Canvas Alanı */}
-              <div className="flex-1 p-6 min-w-0">
-                <div
-                  className="relative w-full h-full border-2 border-dashed rounded-lg bg-background/50 overflow-auto"
-                  style={{
-                    backgroundSize: "20px 20px",
-                    backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)"
-                  }}
-                >
-                  {layout.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => handleItemClick(item.id)}
-                      style={{
-                        position: 'absolute',
-                        left: item.properties.x,
-                        top: item.properties.y,
-                        width: item.properties.width,
-                        height: item.properties.height
-                      }}
-                      className={cn(
-                        "border rounded-md bg-card shadow-sm transition-all cursor-pointer group",
-                        selectedItem === item.id ? "ring-2 ring-primary" : "hover:shadow-md"
-                      )}
+              </CollapsibleContent>
+            </Collapsible>
+            
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger className="flex w-full items-center justify-between p-4 bg-muted/30 sticky top-0 z-10">
+                <h3 className="font-medium">Bileşenler</h3>
+                <ChevronDown className="h-4 w-4 transition-transform duration-200" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="p-2 space-y-2">
+                  {COMPONENTS.map((component) => (
+                    <button
+                      key={component.id}
+                      onClick={() => handleAddComponent(component)}
+                      className="w-full flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground"
                     >
-                      <div className="absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="p-2">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium">{item.properties.label}</span>
-                          {selectedItem === item.id && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleItemDelete(item.id)
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                        {/* Bileşen içeriği */}
-                        {item.type === "input" && (
-                          <input
-                            type="text"
-                            placeholder={item.properties.placeholder}
-                            className="w-full px-2 py-1 border rounded bg-muted/50"
-                            disabled
-                          />
-                        )}
-                        {item.type === "textarea" && (
-                          <textarea
-                            placeholder={item.properties.placeholder}
-                            className="w-full px-2 py-1 border rounded bg-muted/50"
-                            disabled
-                          />
-                        )}
-                        {item.type === "select" && (
-                          <select className="w-full px-2 py-1 border rounded bg-muted/50" disabled>
-                            {item.properties.options?.map((option, i) => (
-                              <option key={i}>{option}</option>
-                            ))}
-                          </select>
-                        )}
-                        {item.type === "button" && (
-                          <Button
-                            variant="secondary"
-                            className="w-full"
-                            disabled
-                          >
-                            {item.properties.label}
-                          </Button>
-                        )}
-                        {item.type === "checkbox" && (
-                          <div className="flex items-center gap-2">
-                            <input type="checkbox" disabled />
-                            <span className="text-sm">{item.properties.label}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                      {component.icon}
+                      <span>{component.label}</span>
+                    </button>
                   ))}
                 </div>
-              </div>
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
 
-              {/* Sağ Panel - Özellikler */}
-              {selectedItem && (
-                <div className="w-[250px] border-l bg-muted/10">
-                  <div className="p-4 border-b bg-muted/30">
-                    <h3 className="font-medium">Özellikler</h3>
+          {/* Orta Panel - Canvas */}
+          <div className="flex-1 overflow-auto">
+            <div className="min-w-[1200px] min-h-[800px] m-6 border-2 border-dashed rounded-lg bg-background/50 relative"
+              style={{
+                backgroundSize: "20px 20px",
+                backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)"
+              }}
+            >
+              {layout.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => handleItemClick(item.id)}
+                  style={{
+                    position: "absolute",
+                    left: item.properties.x,
+                    top: item.properties.y,
+                    width: item.properties.width,
+                    height: item.properties.height,
+                    cursor: "pointer",
+                  }}
+                  className={cn(
+                    "border rounded-md bg-background p-2",
+                    selectedItem === item.id && "ring-2 ring-primary"
+                  )}
+                >
+                  <div className="absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <GripVertical className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <div className="p-4">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Etiket</label>
-                        <Input
-                          value={layout.find(item => item.id === selectedItem)?.properties.label || ""}
-                          onChange={(e) => handleItemUpdate(selectedItem, { label: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Genişlik</label>
-                        <Input
-                          type="number"
-                          value={layout.find(item => item.id === selectedItem)?.properties.width || 200}
-                          onChange={(e) => handleItemUpdate(selectedItem, { width: Number(e.target.value) })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Yükseklik</label>
-                        <Input
-                          type="number"
-                          value={layout.find(item => item.id === selectedItem)?.properties.height || 40}
-                          onChange={(e) => handleItemUpdate(selectedItem, { height: Number(e.target.value) })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">X Pozisyonu</label>
-                        <Input
-                          type="number"
-                          value={layout.find(item => item.id === selectedItem)?.properties.x || 0}
-                          onChange={(e) => handleItemUpdate(selectedItem, { x: Number(e.target.value) })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Y Pozisyonu</label>
-                        <Input
-                          type="number"
-                          value={layout.find(item => item.id === selectedItem)?.properties.y || 0}
-                          onChange={(e) => handleItemUpdate(selectedItem, { y: Number(e.target.value) })}
-                        />
-                      </div>
+                  <div className="p-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium">{item.properties.label}</span>
+                      {selectedItem === item.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleItemDelete(item.id)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
+                    {/* Bileşen içeriği */}
+                    {item.type === "input" && (
+                      <input
+                        type="text"
+                        placeholder={item.properties.placeholder}
+                        className="w-full px-2 py-1 border rounded bg-muted/50"
+                        disabled
+                      />
+                    )}
+                    {item.type === "textarea" && (
+                      <textarea
+                        placeholder={item.properties.placeholder}
+                        className="w-full px-2 py-1 border rounded bg-muted/50"
+                        disabled
+                      />
+                    )}
+                    {item.type === "select" && (
+                      <select className="w-full px-2 py-1 border rounded bg-muted/50" disabled>
+                        {item.properties.options?.map((option, i) => (
+                          <option key={i}>{option}</option>
+                        ))}
+                      </select>
+                    )}
+                    {item.type === "button" && (
+                      <Button
+                        variant="secondary"
+                        className="w-full"
+                        disabled
+                      >
+                        {item.properties.label}
+                      </Button>
+                    )}
+                    {item.type === "checkbox" && (
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" disabled />
+                        <span className="text-sm">{item.properties.label}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+              ))}
             </div>
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              İptal
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={!label || layout.length === 0}
-            >
-              Kaydet
-            </Button>
-          </DialogFooter>
+          {/* Sağ Panel - Özellikler */}
+          {selectedItem && (
+            <div className="w-[250px] border-l bg-muted/10">
+              <div className="p-4 border-b bg-muted/30">
+                <h3 className="font-medium">Özellikler</h3>
+              </div>
+              <div className="p-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Etiket</label>
+                    <Input
+                      value={layout.find(item => item.id === selectedItem)?.properties.label || ""}
+                      onChange={(e) => handleItemUpdate(selectedItem, { label: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Genişlik</label>
+                    <Input
+                      type="number"
+                      value={layout.find(item => item.id === selectedItem)?.properties.width || 200}
+                      onChange={(e) => handleItemUpdate(selectedItem, { width: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Yükseklik</label>
+                    <Input
+                      type="number"
+                      value={layout.find(item => item.id === selectedItem)?.properties.height || 40}
+                      onChange={(e) => handleItemUpdate(selectedItem, { height: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">X Pozisyonu</label>
+                    <Input
+                      type="number"
+                      value={layout.find(item => item.id === selectedItem)?.properties.x || 0}
+                      onChange={(e) => handleItemUpdate(selectedItem, { x: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Y Pozisyonu</label>
+                    <Input
+                      type="number"
+                      value={layout.find(item => item.id === selectedItem)?.properties.y || 0}
+                      onChange={(e) => handleItemUpdate(selectedItem, { y: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+
+        <DialogFooter className="px-6 py-4 border-t">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            İptal
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={!label || layout.length === 0}
+          >
+            Kaydet
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

@@ -246,11 +246,6 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
       <div className="p-4 border-b bg-muted/30">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <h3 className="font-medium">Model</h3>
-            <Button variant="ghost" size="sm" onClick={addField}>
-              <Plus className="w-4 h-4" />
-            </Button>
-          </div>
           <Select
             onValueChange={(template) => {
               const selectedTemplate = fieldTemplates.find(t => t.name === template)
@@ -270,6 +265,10 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
               ))}
             </SelectContent>
           </Select>
+            <Button variant="ghost" size="sm" onClick={addField}>
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
