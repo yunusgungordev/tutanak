@@ -346,7 +346,7 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
           {/* Grid Alanı */}
           <div className="flex-1 overflow-auto p-6">
             {/* Sadece çalışan araç çubuğunu tutalım */}
-            <div className="flex items-center gap-2 mb-4 p-2 bg-muted/30 rounded-md">
+            <div className="flex items-center gap-2 mb-4 p-2 bg-muted/30 rounded-md sticky top-0 z-10">
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
@@ -404,16 +404,22 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
               </div>
             </div>
 
-            {/* Canvas alanı */}
+            {/* Sonsuz canvas alanı */}
             <div 
-              className="relative min-h-[800px] bg-muted/10 rounded-lg border"
+              className="relative w-[3000px] h-[3000px] bg-[url('/grid.svg')] bg-repeat"
               ref={gridRef}
               onClick={handleCanvasClick}
             >
+              {/* Görünür alan göstergesi */}
+              <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+                <div className="w-full h-full border border-dashed border-muted-foreground/20" />
+              </div>
+
               {/* Bileşenler */}
               {layout.map((item) => (
                 <Rnd
                   key={item.id}
+                  bounds="parent"
                   position={{
                     x: item.properties.x,
                     y: item.properties.y
