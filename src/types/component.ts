@@ -1,13 +1,17 @@
-export type DraggableComponentType = {
+export interface ComponentProperties {
+  label?: string
+  placeholder?: string
+  width: number
+  height: number
+  x: number
+  y: number
+  options?: string[]
+}
+
+export interface DraggableComponentType {
   id: string
-  type: "input" | "select" | "textarea" | "table" | "button" | "checkbox"
+  type: string
   label: string
   icon: React.ReactNode
-  defaultProps: {
-    label?: string
-    placeholder?: string
-    width?: number
-    height?: number
-    options?: string[]
-  }
+  defaultProps: ComponentProperties
 } 

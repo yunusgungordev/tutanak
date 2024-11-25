@@ -11,6 +11,15 @@ import { Rnd } from "react-rnd"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ModelPanel } from "./model-panel"
 import { Database, ChevronDown, ChevronRight, LayoutGrid } from "lucide-react"
+import { AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, ArrowLeftRight, ArrowUpDown } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
+import { AlignStartHorizontal, AlignStartVertical, AlignEndHorizontal, AlignEndVertical } from "lucide-react"
+
+// Sabit değerler tanımlayalım
+const GRID_PADDING = 20
+const GRID_WIDTH = 800
+const GRID_HEIGHT = 600
 
 const COMPONENTS: DraggableComponentType[] = [
   {
@@ -22,7 +31,9 @@ const COMPONENTS: DraggableComponentType[] = [
       label: "Yeni Metin Kutusu",
       placeholder: "Metin giriniz",
       width: 200,
-      height: 40
+      height: 40,
+      x: 0,
+      y: 0
     }
   },
   {
@@ -34,7 +45,9 @@ const COMPONENTS: DraggableComponentType[] = [
       label: "Yeni Çok Satırlı Metin",
       placeholder: "Metin giriniz",
       width: 300,
-      height: 100
+      height: 100,
+      x: 0,
+      y: 0
     }
   },
   {
@@ -45,7 +58,9 @@ const COMPONENTS: DraggableComponentType[] = [
     defaultProps: {
       label: "Yeni Tablo",
       width: 400,
-      height: 200
+      height: 200,
+      x: 0,
+      y: 0
     }
   },
   {
@@ -56,7 +71,9 @@ const COMPONENTS: DraggableComponentType[] = [
     defaultProps: {
       label: "Yeni Düğme",
       width: 120,
-      height: 40
+      height: 40,
+      x: 0,
+      y: 0
     }
   },
   {
@@ -68,7 +85,9 @@ const COMPONENTS: DraggableComponentType[] = [
       label: "Yeni Seçim Kutusu",
       width: 200,
       height: 40,
-      options: ["Seçenek 1", "Seçenek 2", "Seçenek 3"]
+      options: ["Seçenek 1", "Seçenek 2", "Seçenek 3"],
+      x: 0,
+      y: 0
     }
   },
   {
@@ -79,7 +98,9 @@ const COMPONENTS: DraggableComponentType[] = [
     defaultProps: {
       label: "Yeni Onay Kutusu",
       width: 200,
-      height: 40
+      height: 40,
+      x: 0,
+      y: 0
     }
   }
 ]
@@ -104,6 +125,18 @@ function getComponentDescription(type: string): string {
   }
 }
 
+// Hizalama türleri için enum
+enum AlignmentType {
+  LEFT = 'left',
+  CENTER = 'center',
+  RIGHT = 'right',
+  TOP = 'top',
+  MIDDLE = 'middle',
+  BOTTOM = 'bottom',
+  DISTRIBUTE_HORIZONTAL = 'distribute-h',
+  DISTRIBUTE_VERTICAL = 'distribute-v'
+}
+
 export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
   const [layout, setLayout] = useState<LayoutConfig[]>([])
   const [label, setLabel] = useState("")
@@ -112,21 +145,53 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
   const [isComponentsOpen, setIsComponentsOpen] = useState(true)
   const gridRef = useRef<HTMLDivElement>(null)
   const { saveDynamicTab } = useTabContext()
+  const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
+  
+  // Çakışma kontrolü
+  const checkCollision = (newItem: any, existingItems: any[]) => {
+    const buffer = 10 // Minimum boşluk
+    return existingItems.some(item => {
+      const overlap = !(
+        newItem.properties.x + newItem.properties.width + buffer < item.properties.x ||
+        newItem.properties.x > item.properties.x + item.properties.width + buffer ||
+        newItem.properties.y + newItem.properties.height + buffer < item.properties.y ||
+        newItem.properties.y > item.properties.y + item.properties.height + buffer
+      )
+      return overlap
+    })
+  }
 
+  // Otomatik pozisyon bulma
+  const findSafePosition = (newItem: any) => {
+    let position = { x: 20, y: 20 }
+    const gridSize = 20
+    
+    while (checkCollision({ ...newItem, properties: { ...newItem.properties, ...position } }, layout)) {
+      position.x += gridSize
+      if (position.x > 800) { // Canvas genişliği
+        position.x = 20
+        position.y += gridSize
+      }
+    }
+    
+    return position
+  }
+
+  // Canvas'a tıklandığında seçimi temizle
+  const handleCanvasClick = (event: React.MouseEvent) => {
+    if (event.target === gridRef.current) {
+      setSelectedComponent(null)
+    }
+  }
+
+  // Bileşen ekleme işlemi güncellenmesi
   const handleAddComponent = (component: DraggableComponentType) => {
-    const gridRect = gridRef.current?.getBoundingClientRect()
-    if (!gridRect) return
-
     const newLayoutItem: LayoutConfig = {
       id: crypto.randomUUID(),
       type: component.type,
       properties: {
-        x: 20,
-        y: 20,
-        width: component.defaultProps.width || 200,
-        height: component.defaultProps.height || 40,
-        label: component.defaultProps.label,
-        placeholder: component.defaultProps.placeholder
+        ...component.defaultProps,
+        ...findSafePosition(component)
       }
     }
     setLayout(prev => [...prev, newLayoutItem])
@@ -160,6 +225,49 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
     } catch (error) {
       toast.error("Tab oluşturulurken bir hata oluştu")
     }
+  }
+
+  const handleComponentSelect = (id: string) => {
+    setSelectedComponent(id)
+  }
+
+  const handleAlignComponent = (alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
+    if (!selectedComponent) return
+    
+    const newLayout = [...layout]
+    const itemIndex = newLayout.findIndex(item => item.id === selectedComponent)
+    
+    if (itemIndex === -1) return
+    
+    const item = newLayout[itemIndex]
+    
+    switch (alignment) {
+      case 'left':
+        item.properties.x = GRID_PADDING
+        break
+        
+      case 'center':
+        item.properties.x = (GRID_WIDTH - item.properties.width) / 2
+        break
+        
+      case 'right':
+        item.properties.x = GRID_WIDTH - item.properties.width - GRID_PADDING
+        break
+        
+      case 'top':
+        item.properties.y = GRID_PADDING
+        break
+        
+      case 'middle':
+        item.properties.y = (GRID_HEIGHT - item.properties.height) / 2
+        break
+        
+      case 'bottom':
+        item.properties.y = GRID_HEIGHT - item.properties.height - GRID_PADDING
+        break
+    }
+    
+    setLayout(newLayout)
   }
 
   return (
@@ -236,45 +344,123 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
           </div>
 
           {/* Grid Alanı */}
-          <div className="flex-1 overflow-auto p-6" ref={gridRef}>
-            <div className="relative min-h-[800px] bg-muted/10 rounded-lg">
+          <div className="flex-1 overflow-auto p-6">
+            {/* Sadece çalışan araç çubuğunu tutalım */}
+            <div className="flex items-center gap-2 mb-4 p-2 bg-muted/30 rounded-md">
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAlignComponent('left')}
+                  disabled={!selectedComponent}
+                >
+                  <AlignStartHorizontal className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAlignComponent('center')}
+                  disabled={!selectedComponent}
+                >
+                  <AlignHorizontalJustifyCenter className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAlignComponent('right')}
+                  disabled={!selectedComponent}
+                >
+                  <AlignEndHorizontal className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <Separator orientation="vertical" className="h-6" />
+              
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAlignComponent('top')}
+                  disabled={!selectedComponent}
+                >
+                  <AlignStartVertical className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAlignComponent('middle')}
+                  disabled={!selectedComponent}
+                >
+                  <AlignVerticalJustifyCenter className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleAlignComponent('bottom')}
+                  disabled={!selectedComponent}
+                >
+                  <AlignEndVertical className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Canvas alanı */}
+            <div 
+              className="relative min-h-[800px] bg-muted/10 rounded-lg border"
+              ref={gridRef}
+              onClick={handleCanvasClick}
+            >
+              {/* Bileşenler */}
               {layout.map((item) => (
                 <Rnd
                   key={item.id}
-                  default={{
+                  position={{
                     x: item.properties.x,
-                    y: item.properties.y,
+                    y: item.properties.y
+                  }}
+                  size={{
                     width: item.properties.width,
                     height: item.properties.height
                   }}
-                  minWidth={100}
-                  minHeight={30}
-                  bounds="parent"
-                  dragHandleClassName="drag-handle"
                   onDragStop={(e, d) => {
-                    setLayout(prev => prev.map(layoutItem => 
-                      layoutItem.id === item.id 
-                        ? { ...layoutItem, properties: { ...layoutItem.properties, x: d.x, y: d.y } }
-                        : layoutItem
-                    ))
+                    const newLayout = [...layout]
+                    const index = newLayout.findIndex(l => l.id === item.id)
+                    if (index !== -1) {
+                      newLayout[index] = {
+                        ...newLayout[index],
+                        properties: {
+                          ...newLayout[index].properties,
+                          x: d.x,
+                          y: d.y
+                        }
+                      }
+                    }
+                    setLayout(newLayout)
                   }}
                   onResizeStop={(e, direction, ref, delta, position) => {
-                    setLayout(prev => prev.map(layoutItem => 
-                      layoutItem.id === item.id 
-                        ? { 
-                            ...layoutItem, 
-                            properties: { 
-                              ...layoutItem.properties, 
-                              width: ref.offsetWidth,
-                              height: ref.offsetHeight,
-                              x: position.x,
-                              y: position.y
-                            } 
-                          }
-                        : layoutItem
-                    ))
+                    const newLayout = [...layout]
+                    const index = newLayout.findIndex(l => l.id === item.id)
+                    if (index !== -1) {
+                      newLayout[index] = {
+                        ...newLayout[index],
+                        properties: {
+                          ...newLayout[index].properties,
+                          width: parseInt(ref.style.width),
+                          height: parseInt(ref.style.height),
+                          x: position.x,
+                          y: position.y
+                        }
+                      }
+                    }
+                    setLayout(newLayout)
                   }}
-                  className="hover:ring-2 ring-primary/50 rounded-md transition-all duration-200"
+                  onClick={(e: React.MouseEvent) => {
+                    handleComponentSelect(item.id)
+                  }}
+                  className={cn(
+                    "hover:ring-2 ring-primary/50 rounded-md transition-all duration-200",
+                    selectedComponent === item.id && "ring-2 ring-primary"
+                  )}
                 >
                   <div className="drag-handle w-full h-6 bg-muted/30 rounded-t-md cursor-move flex items-center justify-center">
                     <div className="w-8 h-1 bg-muted-foreground/30 rounded-full" />
