@@ -406,7 +406,14 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
 
             {/* Sonsuz canvas alanı */}
             <div 
-              className="relative w-[3000px] h-[3000px] bg-[url('/grid.svg')] bg-repeat"
+              className="relative w-[3000px] h-[3000px] bg-muted/5 rounded-lg"
+              style={{
+                backgroundImage: `
+                  linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px),
+                  linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px)
+                `,
+                backgroundSize: '20px 20px'
+              }}
               ref={gridRef}
               onClick={handleCanvasClick}
             >
