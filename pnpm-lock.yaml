@@ -151,7 +151,7 @@ importers:
         version: 5.0.8
       next-themes:
         specifier: ^0.2.1
-        version: 0.2.1(next@13.4.3(@babel/core@7.21.8)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+        version: 0.2.1(next@13.4.3(@babel/core@7.26.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react:
         specifier: ^18.2.0
         version: 18.2.0
@@ -173,6 +173,9 @@ importers:
       react-resizable:
         specifier: ^3.0.5
         version: 3.0.5(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      react-rnd:
+        specifier: ^10.4.13
+        version: 10.4.13(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       recharts:
         specifier: ^2.7.2
         version: 2.7.2(prop-types@15.8.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -3335,6 +3338,12 @@ packages:
       react: '>=16.9.0'
       react-dom: '>=16.9.0'
 
+  re-resizable@6.10.0:
+    resolution: {integrity: sha512-hysSK0xmA5nz24HBVztlk4yCqCLCvS32E6ZpWxVKop9x3tqCa4yAj1++facrmkOf62JsJHjmjABdKxXofYioCw==}
+    peerDependencies:
+      react: ^16.13.1 || ^17.0.0 || ^18.0.0
+      react-dom: ^16.13.1 || ^17.0.0 || ^18.0.0
+
   react-day-picker@8.8.0:
     resolution: {integrity: sha512-QIC3uOuyGGbtypbd5QEggsCSqVaPNu8kzUWquZ7JjW9fuWB9yv7WyixKmnaFelTLXFdq7h7zU6n/aBleBqe/dA==}
     peerDependencies:
@@ -3426,6 +3435,12 @@ packages:
     peerDependencies:
       react: ^16.0.0 || ^17.0.0 || ^18.0.0
       react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0
+
+  react-rnd@10.4.13:
+    resolution: {integrity: sha512-Vgbf0iihspcQ6nkaFhpOGWfmnuVbhkhoB0hBbYl8aRDA4horsQHESc4E1z7O/P27kFFjK2aqM0u5CGzfr9gEZA==}
+    peerDependencies:
+      react: '>=16.3.0'
+      react-dom: '>=16.3.0'
 
   react-smooth@2.0.3:
     resolution: {integrity: sha512-yl4y3XiMorss7ayF5QnBiSprig0+qFHui8uh7Hgg46QX5O+aRMRKlfGGNGLHno35JkQSvSYY8eCWkBfHfrSHfg==}
@@ -3783,6 +3798,9 @@ packages:
 
   tslib@2.5.2:
     resolution: {integrity: sha512-5svOrSA2w3iGFDs1HibEVBGbDrAY82bFQ3HZ3ixB+88nsbsWQoKqDRb5UBYAUPEzbBn6dAp5gRNXglySbx1MlA==}
+
+  tslib@2.6.2:
+    resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
 
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
@@ -6701,13 +6719,13 @@ snapshots:
 
   negotiator@0.6.3: {}
 
-  next-themes@0.2.1(next@13.4.3(@babel/core@7.21.8)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
+  next-themes@0.2.1(next@13.4.3(@babel/core@7.26.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
     dependencies:
-      next: 13.4.3(@babel/core@7.21.8)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      next: 13.4.3(@babel/core@7.26.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
 
-  next@13.4.3(@babel/core@7.21.8)(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
+  next@13.4.3(@babel/core@7.26.0)(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
     dependencies:
       '@next/env': 13.4.3
       '@swc/helpers': 0.5.1
@@ -6716,7 +6734,7 @@ snapshots:
       postcss: 8.4.14
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
-      styled-jsx: 5.1.1(@babel/core@7.21.8)(react@18.2.0)
+      styled-jsx: 5.1.1(@babel/core@7.26.0)(react@18.2.0)
       zod: 3.21.4
     optionalDependencies:
       '@next/swc-darwin-arm64': 13.4.3
@@ -7320,6 +7338,11 @@ snapshots:
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
 
+  re-resizable@6.10.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
+    dependencies:
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
+
   react-day-picker@8.8.0(date-fns@2.30.0)(react@18.2.0):
     dependencies:
       date-fns: 2.30.0
@@ -7408,6 +7431,14 @@ snapshots:
       lodash: 4.17.21
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
+
+  react-rnd@10.4.13(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
+    dependencies:
+      re-resizable: 6.10.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
+      react-draggable: 4.4.6(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      tslib: 2.6.2
 
   react-smooth@2.0.3(prop-types@15.8.1)(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
     dependencies:
@@ -7688,12 +7719,12 @@ snapshots:
 
   strip-final-newline@3.0.0: {}
 
-  styled-jsx@5.1.1(@babel/core@7.21.8)(react@18.2.0):
+  styled-jsx@5.1.1(@babel/core@7.26.0)(react@18.2.0):
     dependencies:
       client-only: 0.0.1
       react: 18.2.0
     optionalDependencies:
-      '@babel/core': 7.21.8
+      '@babel/core': 7.26.0
 
   stylis@4.3.4: {}
 
@@ -7818,6 +7849,8 @@ snapshots:
       strip-bom: 3.0.0
 
   tslib@2.5.2: {}
+
+  tslib@2.6.2: {}
 
   tslib@2.8.1: {}
 
