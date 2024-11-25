@@ -7,6 +7,14 @@ export interface ComponentProperties {
   y: number
   options?: string[]
   headers?: string[]
+  rows?: string[][]
+  striped?: boolean
+  bordered?: boolean
+  hoverable?: boolean
+  sortable?: boolean
+  showPagination?: boolean
+  pageSize?: number
+  resizable?: boolean
 }
 
 export interface DraggableComponentType {

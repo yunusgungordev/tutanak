@@ -10,13 +10,15 @@ import { toast } from "react-hot-toast"
 import { Rnd } from "react-rnd"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ModelPanel } from "./model-panel"
-import { Database, ChevronDown, ChevronRight, LayoutGrid } from "lucide-react"
+import { Database, ChevronDown, ChevronRight, ChevronLeft, LayoutGrid } from "lucide-react"
 import { AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizontalJustifyEnd, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, ArrowLeftRight, ArrowUpDown } from "lucide-react"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { AlignStartHorizontal, AlignStartVertical, AlignEndHorizontal, AlignEndVertical } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { X } from "lucide-react"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 
 // Sabit değerler tanımlayalım
 const GRID_PADDING = 20
@@ -35,7 +37,8 @@ const COMPONENTS: DraggableComponentType[] = [
       width: 200,
       height: 40,
       x: 0,
-      y: 0
+      y: 0,
+      pageSize: 5
     }
   },
   {
@@ -49,7 +52,8 @@ const COMPONENTS: DraggableComponentType[] = [
       width: 300,
       height: 100,
       x: 0,
-      y: 0
+      y: 0,
+      pageSize: 5
     }
   },
   {
@@ -63,7 +67,15 @@ const COMPONENTS: DraggableComponentType[] = [
       height: 200,
       x: 0,
       y: 0,
-      headers: ["Başlık 1", "Başlık 2", "Başlık 3"]
+      headers: ["Başlık 1", "Başlık 2", "Başlık 3"],
+      rows: [["", "", ""]],
+      striped: true,
+      bordered: true,
+      hoverable: true,
+      sortable: false,
+      resizable: true,
+      pageSize: 5,
+      showPagination: false
     }
   },
   {
@@ -76,7 +88,8 @@ const COMPONENTS: DraggableComponentType[] = [
       width: 120,
       height: 40,
       x: 0,
-      y: 0
+      y: 0,
+      pageSize: 5
     }
   },
   {
@@ -90,7 +103,8 @@ const COMPONENTS: DraggableComponentType[] = [
       height: 40,
       options: ["Seçenek 1", "Seçenek 2", "Seçenek 3"],
       x: 0,
-      y: 0
+      y: 0,
+      pageSize: 5
     }
   },
   {
@@ -103,7 +117,8 @@ const COMPONENTS: DraggableComponentType[] = [
       width: 200,
       height: 40,
       x: 0,
-      y: 0
+      y: 0,
+      pageSize: 5
     }
   }
 ]
@@ -271,43 +286,112 @@ function PropertiesPanel({
       )}
 
       {component.type === 'table' && (
-        <div className="space-y-2">
-          <Label>Tablo Başlıkları</Label>
+        <div className="space-y-4">
           <div className="space-y-2">
-            {(component.properties.headers || []).map((header: string, index: number) => (
-              <div key={index} className="flex gap-2">
-                <Input
-                  value={header}
-                  onChange={e => {
-                    const newHeaders = [...(component.properties.headers || [])]
-                    newHeaders[index] = e.target.value
-                    updateProperty('headers', newHeaders)
-                  }}
-                  placeholder={`Başlık ${index + 1}`}
+            <Label>Tablo Başlıkları</Label>
+            <div className="space-y-2">
+              {(component.properties.headers || []).map((header: string, index: number) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={header}
+                    onChange={e => {
+                      const newHeaders = [...(component.properties.headers || [])]
+                      newHeaders[index] = e.target.value
+                      updateProperty('headers', newHeaders)
+                    }}
+                    placeholder={`Başlık ${index + 1}`}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      const newHeaders = [...(component.properties.headers || [])]
+                      newHeaders.splice(index, 1)
+                      updateProperty('headers', newHeaders)
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newHeaders = [...(component.properties.headers || []), '']
+                  updateProperty('headers', newHeaders)
+                }}
+              >
+                Başlık Ekle
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Tablo Özellikleri</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={component.properties.striped}
+                  onCheckedChange={(checked) => updateProperty('striped', checked)}
                 />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    const newHeaders = [...(component.properties.headers || [])]
-                    newHeaders.splice(index, 1)
-                    updateProperty('headers', newHeaders)
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                <span className="text-sm">Zebra Desenli</span>
               </div>
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const newHeaders = [...(component.properties.headers || []), '']
-                updateProperty('headers', newHeaders)
-              }}
-            >
-              Başlık Ekle
-            </Button>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={component.properties.bordered}
+                  onCheckedChange={(checked) => updateProperty('bordered', checked)}
+                />
+                <span className="text-sm">Kenarlıklar</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={component.properties.hoverable}
+                  onCheckedChange={(checked) => updateProperty('hoverable', checked)}
+                />
+                <span className="text-sm">Hover Efekti</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={component.properties.sortable}
+                  onCheckedChange={(checked) => updateProperty('sortable', checked)}
+                />
+                <span className="text-sm">Sıralanabilir</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Sayfalama</Label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={component.properties.showPagination}
+                  onCheckedChange={(checked) => updateProperty('showPagination', checked)}
+                />
+                <span className="text-sm">Sayfalama Göster</span>
+              </div>
+              {component.properties.showPagination && (
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm">Sayfa Başına Satır:</Label>
+                  <Select
+                    value={(component.properties.pageSize || 5).toString()}
+                    onValueChange={(value) => updateProperty('pageSize', parseInt(value))}
+                  >
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[5, 10, 15, 20].map((size) => (
+                        <SelectItem key={size} value={size.toString()}>
+                          {size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -725,14 +809,56 @@ function renderComponentPreview(item: LayoutConfig) {
       )
     case "table":
       return (
-        <div className="w-full h-full bg-background p-2">
-          <div className="flex gap-2">
-            {item.properties.headers?.map((header, index) => (
-              <div key={index} className="flex-1 font-medium text-sm truncate">
-                {header}
+        <div className={cn(
+          "w-full h-full bg-background p-2 overflow-auto",
+          item.properties.bordered && "border border-border rounded-md",
+        )}>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                {item.properties.headers?.map((header, index) => (
+                  <th key={index} className="p-2 text-left font-medium text-sm">
+                    {header}
+                    {item.properties.sortable && (
+                      <button className="ml-1 opacity-50 hover:opacity-100">
+                        <ArrowUpDown className="h-3 w-3" />
+                      </button>
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(item.properties.rows || [["", "", ""]]).map((row: string[], rowIndex: number) => (
+                <tr key={rowIndex} className={cn(
+                  "transition-colors",
+                  item.properties.striped && rowIndex % 2 === 1 && "bg-muted/50",
+                  item.properties.hoverable && "hover:bg-muted/70"
+                )}>
+                  {row.map((cell, cellIndex) => (
+                    <td key={cellIndex} className="p-2 text-sm border-t">
+                      {cell || ""}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {item.properties.showPagination && (
+            <div className="flex items-center justify-between p-2 border-t mt-2">
+              <div className="text-sm text-muted-foreground">
+                1-{item.properties.pageSize} / {item.properties.rows?.length || 0}
               </div>
-            ))}
-          </div>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="sm" disabled>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" disabled>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )
     default:
