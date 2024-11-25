@@ -118,25 +118,28 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
               <Plus className="h-4 w-4" />
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="bg-white">
             <DialogHeader>
-              <DialogTitle>Yeni Cümle Ekle</DialogTitle>
+              <DialogTitle className="text-gray-800">Yeni Cümle Ekle</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <Input
                 placeholder="Başlık"
                 value={newTemplate.title}
                 onChange={e => setNewTemplate(prev => ({ ...prev, title: e.target.value }))}
+                className="bg-white border-gray-200 focus:border-gray-300 text-gray-800 placeholder:text-gray-400 focus:ring-1 focus:ring-gray-300"
               />
               <Textarea
                 placeholder="Açıklama"
                 value={newTemplate.description}
                 onChange={e => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
+                className="bg-white border-gray-200 focus:border-gray-300 text-gray-800 placeholder:text-gray-400 focus:ring-1 focus:ring-gray-300"
               />
               <Textarea
                 placeholder="Not (Opsiyonel)"
                 value={newTemplate.note}
                 onChange={e => setNewTemplate(prev => ({ ...prev, note: e.target.value }))}
+                className="bg-white border-gray-200 focus:border-gray-300 text-gray-800 placeholder:text-gray-400"
               />
               <Button onClick={handleSaveTemplate} className="w-full">
                 Ekle
@@ -147,20 +150,30 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
       </div>
       
       <div className="flex-1 overflow-auto">
-        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-450px)] p-2">
+        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-450px)] p-2 
+          [&::-webkit-scrollbar]:w-2 
+          [&::-webkit-scrollbar-track]:bg-gray-100 
+          [&::-webkit-scrollbar-track]:rounded-lg
+          [&::-webkit-scrollbar-thumb]:bg-gray-300 
+          [&::-webkit-scrollbar-thumb]:rounded-lg
+          [&::-webkit-scrollbar-thumb:hover]:bg-gray-400
+          scrollbar-thin 
+          scrollbar-track-gray-100 
+          scrollbar-thumb-gray-300
+          hover:scrollbar-thumb-gray-400">
           {filteredTemplates.map(template => (
             <Card
               key={template.id}
               onClick={() => onTemplateClick(template)}
               className={cn(
-                "p-2 transition-shadow cursor-pointer hover:shadow-md group",
-                activeTemplateId === template.id && "bg-primary/10"
+                "p-2 transition-all cursor-pointer group bg-white hover:bg-gray-50 border border-gray-100",
+                activeTemplateId === template.id && "bg-primary/5 border-primary/20"
               )}
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h4 className="font-medium">{template.title}</h4>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
+                  <h4 className="font-medium text-gray-800">{template.title}</h4>
+                  <p className="text-sm text-gray-500 line-clamp-2">
                     {template.description}
                   </p>
                 </div>
@@ -181,10 +194,10 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
         </div>
       </div>
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white">
           <DialogHeader>
-            <DialogTitle>Cümleyi Sil</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-800">Cümleyi Sil</DialogTitle>
+            <DialogDescription className="text-gray-600">
               Bu cümleyi silmek istediğinizden emin misiniz?
             </DialogDescription>
           </DialogHeader>
@@ -192,6 +205,7 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
             <Button
               variant="outline"
               onClick={() => setDeleteConfirmOpen(false)}
+              className="bg-white hover:bg-gray-50 text-gray-800"
             >
               İptal
             </Button>

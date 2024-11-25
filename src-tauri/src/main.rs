@@ -49,6 +49,56 @@ struct Template {
     updated_at: String
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct TabData {
+    id: String,
+    label: String,
+    r#type: String,
+    layout: Vec<LayoutConfig>,
+    database: DatabaseConfig,
+    created_at: String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct LayoutConfig {
+    id: String,
+    r#type: String,
+    properties: Properties
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Properties {
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    label: Option<String>,
+    placeholder: Option<String>,
+    options: Option<Vec<String>>
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct DatabaseConfig {
+    table_name: String,
+    fields: Vec<Field>
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Field {
+    name: String,
+    r#type: String
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SavedTab {
+    id: String,
+    label: String,
+    r#type: String,
+    layout: String, // JSON string olarak
+    database: String, // JSON string olarak
+    created_at: String
+}
+
 #[tauri::command]
 async fn save_excel_data(data: String, sheet_name: String) -> Result<(), String> {
     let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
@@ -222,9 +272,109 @@ async fn delete_template(id: i32) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn create_dynamic_tab(tab_data: TabData) -> Result<bool, String> {
+    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    
+    // Debug için
+    println!("Gelen layout verisi: {:?}", tab_data.layout);
+    
+    // Tabs tablosunu oluştur
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS tabs (
+            id TEXT PRIMARY KEY,
+            label TEXT NOT NULL,
+            type TEXT NOT NULL,
+            layout TEXT NOT NULL,
+            database TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )",
+        [],
+    ).map_err(|e| e.to_string())?;
+    
+    let layout_json = serde_json::to_string(&tab_data.layout)
+        .map_err(|e| format!("Layout JSON dönüşüm hatası: {}", e))?;
+    
+    // Debug için
+    println!("JSON'a dönüştürülen layout: {}", layout_json);
+    
+    conn.execute(
+        "INSERT INTO tabs (id, label, type, layout, database, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        (
+            &tab_data.id,
+            &tab_data.label,
+            &tab_data.r#type,
+            &layout_json,
+            &serde_json::to_string(&tab_data.database).unwrap(),
+            &tab_data.created_at
+        ),
+    ).map_err(|e| e.to_string())?;
+
+    Ok(true)
+}
+
+#[tauri::command]
+async fn get_tabs() -> Result<Vec<SavedTab>, String> {
+    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    
+    // Tabs tablosunu oluştur (eğer yoksa)
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS tabs (
+            id TEXT PRIMARY KEY,
+            label TEXT NOT NULL,
+            type TEXT NOT NULL,
+            layout TEXT NOT NULL,
+            database TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )",
+        [],
+    ).map_err(|e| e.to_string())?;
+
+    let mut stmt = conn.prepare(
+        "SELECT id, label, type, layout, database, created_at FROM tabs"
+    ).map_err(|e| e.to_string())?;
+    
+    let tabs = stmt.query_map([], |row| {
+        Ok(SavedTab {
+            id: row.get(0)?,
+            label: row.get(1)?,
+            r#type: row.get(2)?,
+            layout: row.get(3)?,
+            database: row.get(4)?,
+            created_at: row.get(5)?
+        })
+    }).map_err(|e| e.to_string())?;
+    
+    let tabs: Result<Vec<SavedTab>, _> = tabs.collect();
+    tabs.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn delete_tab(id: String) -> Result<(), String> {
+    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    
+    conn.execute(
+        "DELETE FROM tabs WHERE id = ?1",
+        [id],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, save_excel_data, save_note, get_notes, save_template, get_templates, delete_template])
+        .invoke_handler(tauri::generate_handler![
+            greet, 
+            save_excel_data, 
+            save_note, 
+            get_notes, 
+            save_template, 
+            get_templates, 
+            delete_template, 
+            create_dynamic_tab,
+            get_tabs,
+            delete_tab
+        ])
         .plugin(tauri_plugin_app::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_shell::init())
