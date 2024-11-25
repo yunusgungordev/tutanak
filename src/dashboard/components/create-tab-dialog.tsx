@@ -276,7 +276,6 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
                   className="bg-background border rounded-md shadow-sm"
                 >
                   <div className="p-2">
-                    <div className="text-sm font-medium mb-1">{item.properties.label}</div>
                     {renderComponentPreview(item)}
                   </div>
                 </Rnd>

@@ -48,10 +48,7 @@ export const DynamicTabRenderer: React.FC<DynamicTabRendererProps> = ({ label })
     };
 
     return (
-      <div key={item.id} style={style} className="border rounded-md bg-background p-2">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-sm font-medium">{item.properties.label}</span>
-        </div>
+      <div key={item.id} style={style} className="border rounded-md bg-background">
         {renderComponentContent(item)}
       </div>
     );
