@@ -170,7 +170,7 @@ function PropertiesPanel({
   }
 
   return (
-    <div className="w-[250px] border-l p-4 space-y-4">
+    <div className="p-4 space-y-4 overflow-y-auto">
       <div className="font-medium">Özellikler</div>
       
       {/* Tüm bileşenler için ortak özellikler */}
@@ -521,9 +521,9 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
             </Collapsible>
           </div>
 
-          {/* Grid Alanı */}
+          {/* Orta Panel - Canvas */}
           <div className="flex-1 overflow-auto p-6">
-            {/* Sadece çalışan araç çubuğunu tutalım */}
+            {/* Araç çubuğu */}
             <div className="flex items-center gap-2 mb-4 p-2 bg-muted/30 rounded-md sticky top-0 z-10">
               <div className="flex items-center gap-1">
                 <Button
@@ -660,14 +660,18 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
                 </Rnd>
               ))}
             </div>
-
-            {/* Özellikler paneli */}
-            <PropertiesPanel
-              selectedComponent={selectedComponent}
-              layout={layout}
-              setLayout={setLayout}
-            />
           </div>
+
+          {/* Sağ Panel - Özellikler */}
+          {selectedComponent && (
+            <div className="w-[200px] border-l flex flex-col h-full">
+              <PropertiesPanel
+                selectedComponent={selectedComponent}
+                layout={layout}
+                setLayout={setLayout}
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter className="px-6 py-4 border-t">
