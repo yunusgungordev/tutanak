@@ -3,35 +3,36 @@ import { useTabContext } from "@/contexts/tab-context";
 import { Button } from "@/components/ui/button";
 import { Layout as LayoutIcon, Plus } from "lucide-react";
 import { CreateTabDialog } from "@/dashboard/components/create-tab-dialog";
+import { cn } from "@/lib/utils";
 
 export function DashboardLayout() {
   const { tabs, activeTab, setActiveTab } = useTabContext();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
 
   return (
-    <div className="flex h-full">
-      {/* Sol taraftaki tab listesi */}
-      <div className="w-60 border-r bg-background">
+    <div className="dashboard-layout">
+      <div className="sidebar">
         <div className="flex flex-col h-full">
-          <div className="p-4 border-b">
+          <div className="sidebar-header">
             <Button 
               variant="outline" 
-              className="w-full justify-start"
+              className="w-full justify-start gap-2"
               onClick={() => setIsCreateDialogOpen(true)}
             >
-              <Plus className="mr-2 h-4 w-4" />
-              Yeni Tab
+              <Plus className="h-4 w-4" />
+              <span>Yeni Tab</span>
             </Button>
           </div>
           
-          <div className="flex-1 overflow-auto py-2">
+          <div className="sidebar-content">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab)}
-                className={`w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-accent hover:text-accent-foreground ${
-                  activeTab?.id === tab.id ? 'bg-accent text-accent-foreground' : ''
-                }`}
+                className={cn(
+                  "sidebar-item",
+                  activeTab?.id === tab.id && "sidebar-item-active"
+                )}
               >
                 {tab.icon}
                 <span>{tab.label}</span>
@@ -41,9 +42,7 @@ export function DashboardLayout() {
         </div>
       </div>
 
-      {/* Sağ taraftaki içerik alanı */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* Aktif tab içeriği */}
+      <div className="flex-1 relative overflow-hidden bg-background">
         <div className="absolute inset-0 overflow-auto">
           {activeTab && <activeTab.component label={activeTab.label} />}
         </div>

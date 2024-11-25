@@ -211,4 +211,43 @@
   .badge-secondary {
     @apply bg-secondary/10 text-secondary hover:bg-secondary/20;
   }
+
+  .dashboard-layout {
+    @apply flex h-full bg-background/95 backdrop-blur-sm;
+  }
+
+  .sidebar {
+    @apply w-64 border-r bg-card/50 backdrop-blur-md transition-all duration-300 ease-in-out;
+  }
+
+  .sidebar-header {
+    @apply p-4 border-b bg-background/50 backdrop-blur-sm;
+  }
+
+  .sidebar-content {
+    @apply flex-1 overflow-auto py-2 space-y-1;
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-2 px-4 py-2.5 text-sm transition-colors duration-200
+    hover:bg-accent hover:text-accent-foreground rounded-md mx-2;
+  }
+
+  .sidebar-item-active {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  .template-card {
+    @apply p-3 transition-all cursor-pointer bg-card hover:bg-accent/5
+    border border-border/50 hover:border-accent/20 rounded-lg shadow-sm
+    hover:shadow-md duration-200;
+  }
+
+  .template-card-active {
+    @apply bg-accent/10 border-accent/30 shadow-md;
+  }
+
+  .search-container {
+    @apply sticky top-0 z-10 p-2 backdrop-blur-sm bg-background/95 border-b;
+  }
 }

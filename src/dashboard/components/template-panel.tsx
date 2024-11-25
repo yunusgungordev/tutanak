@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { invoke } from "@tauri-apps/api/tauri"
 import { Card } from "@/components/ui/card"
-import { FileText, Plus, Trash2 } from "lucide-react"
+import { FileText, Plus, Trash2, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -103,96 +103,115 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
   }
 
   return (
-    <div className="w-80 h-full flex flex-col">
-      <div className="flex items-center p-2 gap-2">
-        <Input
-          type="search"
-          placeholder="Cümle ara..."
-          className="h-8 w-full text-sm"
-          value={searchQuery}
-          onChange={(e) => handleSearch(e.target.value)}
-        />
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-white">
-            <DialogHeader>
-              <DialogTitle className="text-gray-800">Yeni Cümle Ekle</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <Input
-                placeholder="Başlık"
-                value={newTemplate.title}
-                onChange={e => setNewTemplate(prev => ({ ...prev, title: e.target.value }))}
-                className="bg-white border-gray-200 focus:border-gray-300 text-gray-800 placeholder:text-gray-400 focus:ring-1 focus:ring-gray-300"
-              />
-              <Textarea
-                placeholder="Açıklama"
-                value={newTemplate.description}
-                onChange={e => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
-                className="bg-white border-gray-200 focus:border-gray-300 text-gray-800 placeholder:text-gray-400 focus:ring-1 focus:ring-gray-300"
-              />
-              <Textarea
-                placeholder="Not (Opsiyonel)"
-                value={newTemplate.note}
-                onChange={e => setNewTemplate(prev => ({ ...prev, note: e.target.value }))}
-                className="bg-white border-gray-200 focus:border-gray-300 text-gray-800 placeholder:text-gray-400"
-              />
-              <Button onClick={handleSaveTemplate} className="w-full">
-                Ekle
+    <div className="w-80 h-full flex flex-col border-r bg-card/50 backdrop-blur-sm">
+      <div className="search-container">
+        <div className="flex items-center gap-2">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Cümle ara..."
+              className="h-9 text-sm bg-background/50 pl-9"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+            />
+          </div>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 w-9 p-0">
+                <Plus className="h-4 w-4" />
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Yeni Cümle Ekle</DialogTitle>
+                <DialogDescription>
+                  Yeni bir cümle şablonu oluşturun.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Başlık</label>
+                  <Input
+                    placeholder="Başlık giriniz"
+                    value={newTemplate.title}
+                    onChange={e => setNewTemplate(prev => ({ ...prev, title: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Açıklama</label>
+                  <Textarea
+                    placeholder="Açıklama giriniz"
+                    value={newTemplate.description}
+                    onChange={e => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Not (Opsiyonel)</label>
+                  <Textarea
+                    placeholder="Not ekleyin"
+                    value={newTemplate.note}
+                    onChange={e => setNewTemplate(prev => ({ ...prev, note: e.target.value }))}
+                    rows={2}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                  İptal
+                </Button>
+                <Button onClick={handleSaveTemplate}>
+                  Kaydet
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
       
-      <div className="flex-1 overflow-auto">
-        <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-450px)] p-2 
-          [&::-webkit-scrollbar]:w-2 
-          [&::-webkit-scrollbar-track]:bg-gray-100 
-          [&::-webkit-scrollbar-track]:rounded-lg
-          [&::-webkit-scrollbar-thumb]:bg-gray-300 
-          [&::-webkit-scrollbar-thumb]:rounded-lg
-          [&::-webkit-scrollbar-thumb:hover]:bg-gray-400
-          scrollbar-thin 
-          scrollbar-track-gray-100 
-          scrollbar-thumb-gray-300
-          hover:scrollbar-thumb-gray-400">
+      <div className="flex-1 overflow-auto px-2">
+        <div className="space-y-2 py-2">
           {filteredTemplates.map(template => (
-            <Card
+            <div
               key={template.id}
               onClick={() => onTemplateClick(template)}
               className={cn(
-                "p-2 transition-all cursor-pointer group bg-white hover:bg-gray-50 border border-gray-100",
-                activeTemplateId === template.id && "bg-primary/5 border-primary/20"
+                "group template-card",
+                activeTemplateId === template.id && "template-card-active"
               )}
             >
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h4 className="font-medium text-gray-800">{template.title}</h4>
-                  <p className="text-sm text-gray-500 line-clamp-2">
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-foreground truncate">
+                    {template.title}
+                  </h4>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                     {template.description}
                   </p>
+                  {template.note && (
+                    <div className="mt-2 text-xs text-muted-foreground/80 bg-muted/50 rounded p-1.5">
+                      {template.note}
+                    </div>
+                  )}
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    handleDeleteTemplate(template.id)
+                    e.stopPropagation();
+                    handleDeleteTemplate(template.id);
                   }}
                 >
-                  <Trash2 className="h-4 w-4 text-red-500" />
+                  <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       </div>
+
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="bg-white">
           <DialogHeader>
