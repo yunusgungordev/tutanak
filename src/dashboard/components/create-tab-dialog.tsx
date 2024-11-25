@@ -15,6 +15,8 @@ import { AlignHorizontalJustifyStart, AlignHorizontalJustifyCenter, AlignHorizon
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { AlignStartHorizontal, AlignStartVertical, AlignEndHorizontal, AlignEndVertical } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { X } from "lucide-react"
 
 // Sabit değerler tanımlayalım
 const GRID_PADDING = 20
@@ -60,7 +62,8 @@ const COMPONENTS: DraggableComponentType[] = [
       width: 400,
       height: 200,
       x: 0,
-      y: 0
+      y: 0,
+      headers: ["Başlık 1", "Başlık 2", "Başlık 3"]
     }
   },
   {
@@ -135,6 +138,181 @@ enum AlignmentType {
   BOTTOM = 'bottom',
   DISTRIBUTE_HORIZONTAL = 'distribute-h',
   DISTRIBUTE_VERTICAL = 'distribute-v'
+}
+
+// PropertiesPanel bileşeni
+function PropertiesPanel({ 
+  selectedComponent, 
+  layout, 
+  setLayout 
+}: { 
+  selectedComponent: string | null
+  layout: LayoutConfig[]
+  setLayout: (layout: LayoutConfig[]) => void 
+}) {
+  if (!selectedComponent) return null
+
+  const component = layout.find(item => item.id === selectedComponent)
+  if (!component) return null
+
+  const updateProperty = (key: string, value: any) => {
+    setLayout(layout.map(item => 
+      item.id === selectedComponent 
+        ? { 
+            ...item, 
+            properties: { 
+              ...item.properties, 
+              [key]: value 
+            } 
+          }
+        : item
+    ))
+  }
+
+  return (
+    <div className="w-[250px] border-l p-4 space-y-4">
+      <div className="font-medium">Özellikler</div>
+      
+      {/* Tüm bileşenler için ortak özellikler */}
+      <div className="space-y-2">
+        <Label>Etiket</Label>
+        <Input
+          value={component.properties.label || ''}
+          onChange={e => updateProperty('label', e.target.value)}
+          placeholder="Etiket giriniz"
+        />
+      </div>
+
+      {/* Bileşen tipine özel özellikler */}
+      {component.type === 'input' && (
+        <div className="space-y-2">
+          <Label>Placeholder</Label>
+          <Input
+            value={component.properties.placeholder || ''}
+            onChange={e => updateProperty('placeholder', e.target.value)}
+            placeholder="Placeholder metni giriniz"
+          />
+        </div>
+      )}
+
+      {component.type === 'textarea' && (
+        <div className="space-y-2">
+          <Label>Placeholder</Label>
+          <Input
+            value={component.properties.placeholder || ''}
+            onChange={e => updateProperty('placeholder', e.target.value)}
+            placeholder="Placeholder metni giriniz"
+          />
+        </div>
+      )}
+
+      {component.type === 'button' && (
+        <div className="space-y-2">
+          <Label>Buton Metni</Label>
+          <Input
+            value={component.properties.label || ''}
+            onChange={e => updateProperty('label', e.target.value)}
+            placeholder="Buton metni giriniz"
+          />
+        </div>
+      )}
+
+      {component.type === 'select' && (
+        <div className="space-y-2">
+          <Label>Seçenekler</Label>
+          <div className="space-y-2">
+            {(component.properties.options || []).map((option: string, index: number) => (
+              <div key={index} className="flex gap-2">
+                <Input
+                  value={option}
+                  onChange={e => {
+                    const newOptions = [...(component.properties.options || [])]
+                    newOptions[index] = e.target.value
+                    updateProperty('options', newOptions)
+                  }}
+                  placeholder={`Seçenek ${index + 1}`}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    const newOptions = [...(component.properties.options || [])]
+                    newOptions.splice(index, 1)
+                    updateProperty('options', newOptions)
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const newOptions = [...(component.properties.options || []), '']
+                updateProperty('options', newOptions)
+              }}
+            >
+              Seçenek Ekle
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {component.type === 'checkbox' && (
+        <div className="space-y-2">
+          <Label>Onay Kutusu Metni</Label>
+          <Input
+            value={component.properties.label || ''}
+            onChange={e => updateProperty('label', e.target.value)}
+            placeholder="Onay kutusu metni giriniz"
+          />
+        </div>
+      )}
+
+      {component.type === 'table' && (
+        <div className="space-y-2">
+          <Label>Tablo Başlıkları</Label>
+          <div className="space-y-2">
+            {(component.properties.headers || []).map((header: string, index: number) => (
+              <div key={index} className="flex gap-2">
+                <Input
+                  value={header}
+                  onChange={e => {
+                    const newHeaders = [...(component.properties.headers || [])]
+                    newHeaders[index] = e.target.value
+                    updateProperty('headers', newHeaders)
+                  }}
+                  placeholder={`Başlık ${index + 1}`}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    const newHeaders = [...(component.properties.headers || [])]
+                    newHeaders.splice(index, 1)
+                    updateProperty('headers', newHeaders)
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const newHeaders = [...(component.properties.headers || []), '']
+                updateProperty('headers', newHeaders)
+              }}
+            >
+              Başlık Ekle
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
@@ -471,8 +649,8 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
                     handleComponentSelect(item.id)
                   }}
                   className={cn(
-                    "hover:ring-2 ring-primary/50 rounded-md transition-all duration-200",
-                    selectedComponent === item.id && "ring-2 ring-primary"
+                    "hover:ring-2 ring-primary/50 rounded-md transition-all duration-200 shadow-[0_2px_4px_rgba(0,0,0,0.1)] bg-background",
+                    selectedComponent === item.id && "ring-2 ring-primary shadow-[0_4px_8px_rgba(0,0,0,0.15)]"
                   )}
                 >
                   <div className="drag-handle w-full h-6 bg-muted/30 rounded-t-md cursor-move flex items-center justify-center">
@@ -482,6 +660,13 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
                 </Rnd>
               ))}
             </div>
+
+            {/* Özellikler paneli */}
+            <PropertiesPanel
+              selectedComponent={selectedComponent}
+              layout={layout}
+              setLayout={setLayout}
+            />
           </div>
         </div>
 
@@ -515,6 +700,18 @@ function renderComponentPreview(item: LayoutConfig) {
         <div className="flex items-center gap-2">
           <input type="checkbox" disabled />
           <span className="text-sm">{item.properties.label}</span>
+        </div>
+      )
+    case "table":
+      return (
+        <div className="w-full h-full bg-background p-2">
+          <div className="flex gap-2">
+            {item.properties.headers?.map((header, index) => (
+              <div key={index} className="flex-1 font-medium text-sm truncate">
+                {header}
+              </div>
+            ))}
+          </div>
         </div>
       )
     default:

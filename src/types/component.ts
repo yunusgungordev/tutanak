@@ -6,6 +6,7 @@ export interface ComponentProperties {
   x: number
   y: number
   options?: string[]
+  headers?: string[]
 }
 
 export interface DraggableComponentType {

@@ -1,4 +1,5 @@
 import { ComponentType } from "react"
+import { ComponentProperties } from "./component"
 
 export type TabContent = {
   id: string
@@ -23,15 +24,7 @@ export interface DynamicTabConfig {
 export interface LayoutConfig {
   id: string;
   type: string;
-  properties: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    label?: string;
-    placeholder?: string;
-    options?: string[];
-  };
+  properties: ComponentProperties;
 }
 
 export interface Field {
