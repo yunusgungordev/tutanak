@@ -649,11 +649,11 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
                     handleComponentSelect(item.id)
                   }}
                   className={cn(
-                    "hover:ring-2 ring-primary/50 rounded-md transition-all duration-200 shadow-[0_2px_4px_rgba(0,0,0,0.1)] bg-background",
-                    selectedComponent === item.id && "ring-2 ring-primary shadow-[0_4px_8px_rgba(0,0,0,0.15)]"
+                    "hover:ring-2 ring-primary/50 rounded-md transition-all duration-200 shadow-[0_4px_12px_rgba(0,0,0,0.15)] bg-background group",
+                    selectedComponent === item.id && "ring-2 ring-primary shadow-[0_8px_16px_rgba(0,0,0,0.2)]"
                   )}
                 >
-                  <div className="drag-handle w-full h-6 bg-muted/30 rounded-t-md cursor-move flex items-center justify-center">
+                  <div className="drag-handle w-full h-6 bg-muted/30 rounded-t-md cursor-move flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="w-8 h-1 bg-muted-foreground/30 rounded-full" />
                   </div>
                   {renderComponentPreview(item)}
@@ -686,9 +686,22 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
 function renderComponentPreview(item: LayoutConfig) {
   switch (item.type) {
     case "input":
-      return <input type="text" className="w-full px-2 py-1 border rounded bg-muted/50" disabled />
+      return (
+        <input 
+          type="text" 
+          className="w-full px-2 py-1 border rounded bg-muted/50" 
+          placeholder={item.properties.placeholder || "Metin giriniz"}
+          disabled 
+        />
+      )
     case "textarea":
-      return <textarea className="w-full px-2 py-1 border rounded bg-muted/50" disabled />
+      return (
+        <textarea 
+          className="w-full px-2 py-1 border rounded bg-muted/50" 
+          placeholder={item.properties.placeholder || "Metin giriniz"}
+          disabled 
+        />
+      )
     case "select":
       return (
         <select className="w-full px-2 py-1 border rounded bg-muted/50" disabled>
@@ -698,12 +711,16 @@ function renderComponentPreview(item: LayoutConfig) {
         </select>
       )
     case "button":
-      return <Button variant="secondary" className="w-full" disabled>{item.properties.label}</Button>
+      return (
+        <Button variant="secondary" className="w-full" disabled>
+          {item.properties.label || "Buton"}
+        </Button>
+      )
     case "checkbox":
       return (
         <div className="flex items-center gap-2">
           <input type="checkbox" disabled />
-          <span className="text-sm">{item.properties.label}</span>
+          <span className="text-sm">{item.properties.label || "Onay Kutusu"}</span>
         </div>
       )
     case "table":
