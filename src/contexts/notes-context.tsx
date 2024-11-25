@@ -17,12 +17,13 @@ interface TimelineNote {
 
 interface NotesContextType {
   notes: TimelineNote[]
+  searchResults: TimelineNote[]
+  setSearchResults: React.Dispatch<React.SetStateAction<TimelineNote[]>>
   addNote: (note: Omit<TimelineNote, "id" | "status">) => void
   updateNoteStatus: (id: string, status: TimelineNote["status"]) => void
   deleteNote: (id: string) => void
   updateNoteLastNotified: (id: string) => void
-  searchNotes: (query: string) => void
-  searchResults: TimelineNote[]
+  searchNotes: (query: string, dateFilteredNotes?: TimelineNote[]) => void
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined)
@@ -116,28 +117,21 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     ))
   }
 
-  const searchNotes = (query: string) => {
+  const searchNotes = (query: string, dateFilteredNotes?: TimelineNote[]) => {
     if (!query.trim()) {
-      setSearchResults([])
-      return
+      setSearchResults([]);
+      return;
     }
 
-    const results = notes.filter(note => {
-      const searchDate = new Date(query)
-      const isValidDate = !isNaN(searchDate.getTime())
+    const notesToSearch = dateFilteredNotes || notes;
+    
+    const results = notesToSearch.filter(note => {
+      const searchableContent = `${note.title} ${note.content}`.toLowerCase();
+      return searchableContent.includes(query.toLowerCase());
+    });
 
-      if (isValidDate) {
-        return startOfDay(note.date).getTime() === startOfDay(searchDate).getTime()
-      }
-
-      return (
-        note.title.toLowerCase().includes(query.toLowerCase()) ||
-        note.content.toLowerCase().includes(query.toLowerCase())
-      )
-    })
-
-    setSearchResults(results)
-  }
+    setSearchResults(results);
+  };
 
   useEffect(() => {
     const checkOverdueNotes = () => {
@@ -160,12 +154,13 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   return (
     <NotesContext.Provider value={{ 
       notes, 
+      searchResults,
+      setSearchResults,
       addNote, 
       updateNoteStatus, 
-      deleteNote, 
+      deleteNote,
       updateNoteLastNotified,
-      searchNotes,
-      searchResults 
+      searchNotes
     }}>
       {children}
     </NotesContext.Provider>

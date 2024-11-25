@@ -36,7 +36,7 @@ function isNewYear(current: Date, prev?: Date) {
 }
 
 export function Timeline() {
-  const { notes, searchResults, searchNotes } = useNotes()
+  const { notes, searchResults, setSearchResults, searchNotes } = useNotes()
   const { isMinimized, setIsMinimized } = useTimeline()
   const [searchQuery, setSearchQuery] = useState("")
   const [position, setPosition] = useState({ x: 0, y: 0 })
@@ -47,9 +47,9 @@ export function Timeline() {
   useEffect(() => {
     const now = new Date()
     const datesArray = []
-    const startDate = subDays(now, 15)
+    const startDate = subDays(now, 180)
     
-    for (let i = 0; i < 31; i++) {
+    for (let i = 0; i < 365; i++) {
       datesArray.push(addDays(startDate, i))
     }
     
@@ -145,9 +145,49 @@ export function Timeline() {
   })
 
   const handleSearch = (value: string) => {
-    setSearchQuery(value)
-    searchNotes(value)
-  }
+    setSearchQuery(value);
+    
+    // Tarih formatını kontrol et (DD.MM.YYYY veya DD/MM/YYYY)
+    const datePattern = /^(\d{2})[./](\d{2})[./](\d{4})$/;
+    const match = value.match(datePattern);
+    
+    if (match) {
+      const [_, day, month, year] = match;
+      const searchDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      
+      // Tarihe göre notları filtrele
+      const filteredNotes = notes.filter(note => {
+        const noteDate = new Date(note.date);
+        return (
+          noteDate.getDate() === searchDate.getDate() &&
+          noteDate.getMonth() === searchDate.getMonth() &&
+          noteDate.getFullYear() === searchDate.getFullYear()
+        );
+      });
+      
+      if (filteredNotes.length > 0) {
+        setSearchResults(filteredNotes);
+        
+        // İlgili tarihe git
+        const resultIndex = dates.findIndex(date => 
+          startOfDay(date).getTime() === startOfDay(searchDate).getTime()
+        );
+        
+        if (resultIndex !== -1) {
+          const newPosition = calculatePosition(resultIndex);
+          setPosition({ 
+            x: getClampedPosition(newPosition), 
+            y: 0 
+          });
+        }
+      } else {
+        setSearchResults([]);
+      }
+    } else {
+      // Normal metin araması
+      searchNotes(value);
+    }
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -189,7 +229,7 @@ export function Timeline() {
             <div className="flex items-center gap-4">
               <Input
                 type="search"
-                placeholder="Tarih veya kelime ile ara..."
+                placeholder="Tarih (gg/aa/yyyy) veya kelime ile ara..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="w-[300px] h-9"
