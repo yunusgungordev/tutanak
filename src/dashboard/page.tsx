@@ -58,8 +58,8 @@ export default function DashboardPage() {
                     <TabBar />
                   </div>
 
-                  <div className="flex-1 overflow-hidden">
-                    <div className="min-w-[1000px] h-full overflow-auto">
+                  <div className="flex-1 overflow-x-auto">
+                    <div className="min-w-[1000px] h-full">
                       <TabContent />
                     </div>
                   </div>
