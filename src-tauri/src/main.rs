@@ -349,6 +349,18 @@ async fn get_tabs() -> Result<Vec<SavedTab>, String> {
     tabs.map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn delete_tab(id: String) -> Result<(), String> {
+    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    
+    conn.execute(
+        "DELETE FROM tabs WHERE id = ?1",
+        [id],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -360,7 +372,8 @@ fn main() {
             get_templates, 
             delete_template, 
             create_dynamic_tab,
-            get_tabs
+            get_tabs,
+            delete_tab
         ])
         .plugin(tauri_plugin_app::init())
         .plugin(tauri_plugin_os::init())

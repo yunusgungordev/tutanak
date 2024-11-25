@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useTabContext } from "@/contexts/tab-context";
 import { invoke } from "@tauri-apps/api/tauri";
+import { TimelineProvider } from "@/contexts/timeline-context"
 
 interface DynamicTabRendererProps {
   label: string;
@@ -23,9 +24,7 @@ export const DynamicTabRenderer: React.FC<DynamicTabRendererProps> = ({ label })
         const currentTab = savedTabs.find(tab => tab.label === label);
         
         if (currentTab) {
-          console.log('Yüklenen tab verisi:', currentTab);
           const layoutData = JSON.parse(currentTab.layout);
-          console.log('Parse edilen layout:', layoutData);
           setLayout(layoutData);
         }
         
@@ -39,111 +38,64 @@ export const DynamicTabRenderer: React.FC<DynamicTabRendererProps> = ({ label })
     loadTabData();
   }, [label]);
 
-  if (loading) {
-    return <div className="p-4">Yükleniyor...</div>;
-  }
-
   const renderComponent = (item: any) => {
+    const style = {
+      position: 'absolute' as const,
+      left: `${item.properties.x}px`,
+      top: `${item.properties.y}px`,
+      width: `${item.properties.width}px`,
+      height: `${item.properties.height}px`,
+    };
+
+    return (
+      <div key={item.id} style={style} className="border rounded-md bg-background p-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-sm font-medium">{item.properties.label}</span>
+        </div>
+        {renderComponentContent(item)}
+      </div>
+    );
+  };
+
+  const renderComponentContent = (item: any) => {
     switch (item.type) {
       case 'input':
         return (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{item.properties.label}</label>
-            <Input
-              placeholder={item.properties.placeholder}
-              style={{
-                width: item.properties.width,
-                height: item.properties.height
-              }}
-            />
-          </div>
+          <input
+            type="text"
+            placeholder={item.properties.placeholder}
+            className="w-full px-2 py-1 border rounded"
+          />
         );
-
-      case 'textarea':
-        return (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{item.properties.label}</label>
-            <Textarea
-              placeholder={item.properties.placeholder}
-              style={{
-                width: item.properties.width,
-                height: item.properties.height
-              }}
-            />
-          </div>
-        );
-
-      case 'select':
-        return (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">{item.properties.label}</label>
-            <Select>
-              <SelectTrigger style={{ width: item.properties.width }}>
-                <SelectValue placeholder="Seçiniz" />
-              </SelectTrigger>
-              <SelectContent>
-                {item.properties.options?.map((option: string, index: number) => (
-                  <SelectItem key={index} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        );
-
       case 'button':
         return (
-          <Button
-            style={{
-              width: item.properties.width,
-              height: item.properties.height
-            }}
-          >
+          <button className="w-full h-full px-4 py-2 bg-primary text-primary-foreground rounded-md">
             {item.properties.label}
-          </Button>
+          </button>
         );
-
-      case 'checkbox':
+      case 'textarea':
         return (
-          <div className="flex items-center gap-2">
-            <Checkbox id={item.id} />
-            <label
-              htmlFor={item.id}
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              {item.properties.label}
-            </label>
+          <div className="w-full h-full">
+            <label className="block text-sm font-medium mb-1">{item.properties.label}</label>
+            <textarea
+              placeholder={item.properties.placeholder}
+              className="w-full h-[calc(100%-24px)] px-3 py-2 border rounded-md resize-none"
+            />
           </div>
         );
-
       default:
         return null;
     }
   };
 
+  if (loading) {
+    return <div className="p-4">Yükleniyor...</div>;
+  }
+
   return (
-    <div className="h-full w-full">
-      <div 
-        className="relative w-full h-full p-6 overflow-auto"
-        style={{
-          backgroundSize: "20px 20px",
-          backgroundImage: "linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)"
-        }}
-      >
-        {layout.map((item) => (
-          <div
-            key={item.id}
-            style={{
-              position: 'absolute',
-              left: item.properties.x,
-              top: item.properties.y,
-              zIndex: 10 // Üst katmanda görünmesi için
-            }}
-          >
-            {renderComponent(item)}
-          </div>
-        ))}
+    <div className="relative w-full h-full overflow-auto">
+      <div className="min-h-[200px] bg-muted/10 rounded-lg p-4">
+        {layout.map(item => renderComponent(item))}
       </div>
     </div>
   );

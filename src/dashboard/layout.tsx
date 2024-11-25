@@ -44,7 +44,7 @@ export function DashboardLayout() {
       {/* Sağ taraftaki içerik alanı */}
       <div className="flex-1 relative overflow-hidden">
         {/* Aktif tab içeriği */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 overflow-auto">
           {activeTab && <activeTab.component label={activeTab.label} />}
         </div>
       </div>

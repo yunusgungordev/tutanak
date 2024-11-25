@@ -123,15 +123,25 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
     ))
   }
 
-  const removeTab = (tabId: string) => {
-    setTabs((prevTabs) => {
-      const newTabs = prevTabs.filter((tab) => tab.id !== tabId)
-      if (activeTab.id === tabId && newTabs.length > 0) {
-        setActiveTab(newTabs[0])
+  const removeTab = async (tabId: string) => {
+    try {
+      // Eğer dinamik bir tab ise veritabanından sil
+      const tabToRemove = tabs.find(tab => tab.id === tabId);
+      if (tabToRemove?.type === "dynamic") {
+        await invoke('delete_tab', { id: tabId });
       }
-      return newTabs
-    })
-  }
+      
+      // UI'dan tab'ı kaldır
+      setTabs(prev => prev.filter(tab => tab.id !== tabId));
+      
+      // Eğer aktif tab siliniyorsa, varsayılan tab'a geç
+      if (activeTab?.id === tabId) {
+        setActiveTab(defaultTabs[0]);
+      }
+    } catch (error) {
+      console.error('Tab silme hatası:', error);
+    }
+  };
 
   const updateTab = (tabId: string, newLabel: string) => {
     setTabs((prevTabs) =>
