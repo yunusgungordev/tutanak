@@ -48,7 +48,7 @@ export const DynamicTabRenderer: React.FC<DynamicTabRendererProps> = ({ label })
     };
 
     return (
-      <div key={item.id} style={style} className="border rounded-md bg-background">
+      <div key={item.id} style={style} className="!absolute">
         {renderComponentContent(item)}
       </div>
     );
@@ -58,25 +58,26 @@ export const DynamicTabRenderer: React.FC<DynamicTabRendererProps> = ({ label })
     switch (item.type) {
       case 'input':
         return (
-          <input
-            type="text"
-            placeholder={item.properties.placeholder}
-            className="w-full px-2 py-1 border rounded"
-          />
+          <div className="w-full h-full bg-background border rounded-md shadow-sm">
+            <input
+              type="text"
+              placeholder={item.properties.placeholder}
+              className="w-full h-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 ring-primary"
+            />
+          </div>
         );
       case 'button':
         return (
-          <button className="w-full h-full px-4 py-2 bg-primary text-primary-foreground rounded-md">
+          <button className="w-full h-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors shadow-sm">
             {item.properties.label}
           </button>
         );
       case 'textarea':
         return (
-          <div className="w-full h-full">
-            <label className="block text-sm font-medium mb-1">{item.properties.label}</label>
+          <div className="w-full h-full bg-background border rounded-md shadow-sm">
             <textarea
               placeholder={item.properties.placeholder}
-              className="w-full h-[calc(100%-24px)] px-3 py-2 border rounded-md resize-none"
+              className="w-full h-full px-3 py-2 rounded-md resize-none focus:outline-none focus:ring-2 ring-primary"
             />
           </div>
         );

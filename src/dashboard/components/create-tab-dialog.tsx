@@ -250,6 +250,7 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
                   minWidth={100}
                   minHeight={30}
                   bounds="parent"
+                  dragHandleClassName="drag-handle"
                   onDragStop={(e, d) => {
                     setLayout(prev => prev.map(layoutItem => 
                       layoutItem.id === item.id 
@@ -273,11 +274,12 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
                         : layoutItem
                     ))
                   }}
-                  className="bg-background border rounded-md shadow-sm"
+                  className="hover:ring-2 ring-primary/50 rounded-md transition-all duration-200"
                 >
-                  <div className="p-2">
-                    {renderComponentPreview(item)}
+                  <div className="drag-handle w-full h-6 bg-muted/30 rounded-t-md cursor-move flex items-center justify-center">
+                    <div className="w-8 h-1 bg-muted-foreground/30 rounded-full" />
                   </div>
+                  {renderComponentPreview(item)}
                 </Rnd>
               ))}
             </div>
