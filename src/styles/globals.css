@@ -18,30 +18,30 @@
     --popover: 0 0% 100%;
     --popover-foreground: 224 71.4% 4.1%;
     
-    --primary: 220.9 39.3% 11%;
+    --primary: 222 47% 11%;
     --primary-foreground: 210 20% 98%;
     
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220.9 39.3% 11%;
+    --secondary: 220 16% 96%;
+    --secondary-foreground: 222 47% 11%;
     
     --muted: 220 14.3% 95.9%;
     --muted-foreground: 220 8.9% 46.1%;
     
     --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220.9 39.3% 11%;
+    --accent-foreground: 222 47% 11%;
     
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 20% 98%;
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 224 71.4% 4.1%;
+    --ring: 222 47% 11%;
     
     --radius: 0.5rem;
+    --radius-lg: 0.75rem;
 
-    --tab-active: 220 14.3% 95.9%;
-    --tab-inactive: 220 13% 91%;
-    --tab-hover: 220 14.3% 90%;
+    --backdrop-blur: blur(8px);
+    --backdrop-saturate: saturate(180%);
   }
 
   .dark {
@@ -55,7 +55,7 @@
     --popover-foreground: 210 20% 98%;
     
     --primary: 210 20% 98%;
-    --primary-foreground: 220.9 39.3% 11%;
+    --primary-foreground: 222 47% 11%;
     
     --secondary: 215 27.9% 16.9%;
     --secondary-foreground: 210 20% 98%;
@@ -72,10 +72,6 @@
     --border: 215 27.9% 16.9%;
     --input: 215 27.9% 16.9%;
     --ring: 216 12.2% 83.9%;
-
-    --tab-active: 215 27.9% 16.9%;
-    --tab-inactive: 224 71.4% 4.1%;
-    --tab-hover: 215 27.9% 20%;
   }
 }
 
@@ -173,35 +169,40 @@
 /* Custom Component Styles */
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors 
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-all duration-200
     focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
-    disabled:opacity-50 disabled:pointer-events-none;
+    disabled:opacity-50 disabled:pointer-events-none shadow-sm hover:shadow-md;
   }
 
   .btn-primary {
-    @apply bg-primary text-white hover:bg-primary-dark;
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
   }
 
   .btn-secondary {
-    @apply bg-secondary text-white hover:bg-secondary-dark;
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90;
   }
 
   .card {
-    @apply rounded-lg border bg-card p-6 shadow-md transition-all duration-200;
+    @apply rounded-[var(--radius-lg)] border bg-card/95 text-card-foreground 
+    shadow-sm hover:shadow-md transition-all duration-300 backdrop-blur-sm;
   }
 
   .input {
-    @apply rounded-md border border-input bg-background px-3 py-2 text-sm
-    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+    @apply rounded-md border border-input bg-background/80 px-3 py-2 text-sm
+    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+    placeholder:text-muted-foreground/60 transition-colors duration-200
+    hover:border-primary/30;
   }
 
   .select {
-    @apply rounded-md border border-input bg-background px-3 py-2 text-sm
-    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+    @apply rounded-md border border-input bg-background/80 px-3 py-2 text-sm
+    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+    transition-colors duration-200 hover:border-primary/30;
   }
 
   .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors;
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold 
+    transition-colors duration-200 shadow-sm;
   }
 
   .badge-primary {
@@ -217,7 +218,8 @@
   }
 
   .sidebar {
-    @apply w-64 border-r bg-card/50 backdrop-blur-md transition-all duration-300 ease-in-out;
+    @apply w-64 border-r bg-card/50 backdrop-blur-md transition-all duration-300 ease-in-out
+    shadow-sm;
   }
 
   .sidebar-header {
@@ -229,18 +231,18 @@
   }
 
   .sidebar-item {
-    @apply flex items-center gap-2 px-4 py-2.5 text-sm transition-colors duration-200
+    @apply flex items-center gap-2 px-4 py-2.5 text-sm transition-all duration-200
     hover:bg-accent hover:text-accent-foreground rounded-md mx-2;
   }
 
   .sidebar-item-active {
-    @apply bg-accent text-accent-foreground;
+    @apply bg-accent/10 text-accent-foreground shadow-sm;
   }
 
   .template-card {
-    @apply p-3 transition-all cursor-pointer bg-card hover:bg-accent/5
-    border border-border/50 hover:border-accent/20 rounded-lg shadow-sm
-    hover:shadow-md duration-200;
+    @apply p-4 transition-all cursor-pointer bg-card hover:bg-accent/5
+    border border-border/50 hover:border-accent/20 rounded-[var(--radius-lg)] 
+    shadow-sm hover:shadow-md duration-300;
   }
 
   .template-card-active {
@@ -248,6 +250,7 @@
   }
 
   .search-container {
-    @apply sticky top-0 z-10 p-2 backdrop-blur-sm bg-background/95 border-b;
+    @apply sticky top-0 z-10 p-3 backdrop-blur-md bg-background/90 border-b
+    shadow-sm;
   }
 }

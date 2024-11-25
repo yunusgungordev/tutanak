@@ -9,7 +9,9 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-[var(--radius-lg)] border bg-card/95 text-card-foreground shadow-md hover:shadow-lg transition-all duration-300",
+      "rounded-[var(--radius-lg)] border bg-card/95 text-card-foreground backdrop-blur-sm",
+      "shadow-sm hover:shadow-md transition-all duration-300",
+      "hover:border-accent/20",
       className
     )}
     {...props}
@@ -23,7 +25,12 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-7 border-b border-border/30", className)}
+    className={cn(
+      "flex flex-col space-y-1.5 p-6",
+      "border-b border-border/30",
+      "bg-gradient-to-b from-background/50 to-transparent",
+      className
+    )}
     {...props}
   />
 ))
@@ -36,7 +43,9 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-none tracking-tight text-foreground/90",
+      "text-2xl font-semibold leading-none tracking-tight",
+      "text-foreground/90",
+      "mb-1",
       className
     )}
     {...props}
@@ -50,7 +59,12 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-sm text-muted-foreground leading-relaxed mt-2.5", className)}
+    className={cn(
+      "text-sm text-muted-foreground",
+      "leading-relaxed",
+      "mt-2",
+      className
+    )}
     {...props}
   />
 ))
@@ -62,7 +76,11 @@ const CardContent = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("p-7 pt-0", className)}
+    className={cn(
+      "p-6 pt-0",
+      "space-y-4",
+      className
+    )}
     {...props}
   />
 ))
@@ -74,7 +92,10 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex items-center p-7 pt-0", className)}
+    className={cn(
+      "flex items-center p-6 pt-0",
+      className
+    )}
     {...props}
   />
 ))
