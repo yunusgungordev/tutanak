@@ -10,6 +10,7 @@ import { toast } from "react-hot-toast"
 import { Rnd } from "react-rnd"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ModelPanel } from "./model-panel"
+import { Database, ChevronDown, ChevronRight, LayoutGrid } from "lucide-react"
 
 const COMPONENTS: DraggableComponentType[] = [
   {
@@ -82,6 +83,26 @@ const COMPONENTS: DraggableComponentType[] = [
     }
   }
 ]
+
+// Component açıklamalarını getiren yardımcı fonksiyon
+function getComponentDescription(type: string): string {
+  switch (type) {
+    case "input":
+      return "Tek satırlık metin girişi"
+    case "textarea":
+      return "Çok satırlı metin girişi"
+    case "select":
+      return "Açılır liste seçimi"
+    case "button":
+      return "Tıklanabilir düğme"
+    case "table":
+      return "Veri tablosu"
+    case "checkbox":
+      return "Onay kutusu"
+    default:
+      return ""
+  }
+}
 
 export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
   const [layout, setLayout] = useState<LayoutConfig[]>([])
@@ -156,16 +177,19 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
 
         <div className="flex-1 min-h-0 flex">
           {/* Sol Panel */}
-          <div className="w-[250px] border-r">
+          <div className="w-[250px] border-r flex flex-col h-full">
             {/* Model Bölümü */}
-            <Collapsible open={isModelOpen} onOpenChange={setIsModelOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border-b bg-muted/30">
-                <span className="font-medium">Model</span>
-                <Button variant="ghost" size="sm">
-                  {isModelOpen ? "−" : "+"}
+            <Collapsible open={isModelOpen} onOpenChange={setIsModelOpen} className="min-h-0">
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border-b bg-muted/30 sticky top-0 z-10">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4" />
+                  <span className="font-medium">Model</span>
+                </div>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                  {isModelOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent>
+              <CollapsibleContent className="overflow-y-auto max-h-[300px] scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
                 <div className="p-4">
                   <ModelPanel onFieldsChange={setFields} />
                 </div>
@@ -173,25 +197,39 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
             </Collapsible>
 
             {/* Bileşenler Bölümü */}
-            <Collapsible open={isComponentsOpen} onOpenChange={setIsComponentsOpen}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border-b bg-muted/30">
-                <span className="font-medium">Bileşenler</span>
-                <Button variant="ghost" size="sm">
-                  {isComponentsOpen ? "−" : "+"}
+            <Collapsible open={isComponentsOpen} onOpenChange={setIsComponentsOpen} className="min-h-0 flex-1 flex flex-col">
+              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border-b bg-muted/30 sticky top-0 z-10">
+                <div className="flex items-center gap-2">
+                  <LayoutGrid className="w-4 h-4" />
+                  <span className="font-medium">Bileşenler</span>
+                </div>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                  {isComponentsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 </Button>
               </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="p-4 space-y-2">
-                  {COMPONENTS.map((component) => (
-                    <button
-                      key={component.id}
-                      onClick={() => handleAddComponent(component)}
-                      className="w-full flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground"
-                    >
-                      {component.icon}
-                      <span>{component.label}</span>
-                    </button>
-                  ))}
+              <CollapsibleContent className="flex-1 min-h-0 overflow-hidden">
+                <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
+                  <div className="p-4 space-y-2">
+                    <div className="grid grid-cols-1 gap-2">
+                      {COMPONENTS.map((component) => (
+                        <button
+                          key={component.id}
+                          onClick={() => handleAddComponent(component)}
+                          className="flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+                        >
+                          <div className="w-8 h-8 flex items-center justify-center rounded-md bg-muted">
+                            {component.icon}
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="font-medium">{component.label}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {getComponentDescription(component.type)}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </CollapsibleContent>
             </Collapsible>
