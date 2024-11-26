@@ -24,6 +24,56 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 const GRID_PADDING = 20
 const GRID_WIDTH = 800
 const GRID_HEIGHT = 600
+const GRID_SNAP = 10
+
+// Izgara yardımcı çizgileri için stil
+const gridStyle = {
+  backgroundImage: `
+    linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
+  `,
+  backgroundSize: `${GRID_SNAP}px ${GRID_SNAP}px`
+}
+
+// Bileşen hizalama yardımcısı
+const getSnapPosition = (value: number): number => {
+  return Math.round(value / GRID_SNAP) * GRID_SNAP
+}
+
+// Bileşen pozisyonlama ve boyutlandırma için yardımcı fonksiyonlar
+const handleDragStop = (e: any, d: any, item: LayoutConfig, layout: LayoutConfig[], setLayout: (layout: LayoutConfig[]) => void) => {
+  const newLayout = [...layout]
+  const index = newLayout.findIndex(l => l.id === item.id)
+  if (index !== -1) {
+    newLayout[index] = {
+      ...newLayout[index],
+      properties: {
+        ...newLayout[index].properties,
+        x: getSnapPosition(d.x),
+        y: getSnapPosition(d.y)
+      }
+    }
+  }
+  setLayout(newLayout)
+}
+
+const handleResizeStop = (e: any, direction: any, ref: any, delta: any, position: any, item: LayoutConfig, layout: LayoutConfig[], setLayout: (layout: LayoutConfig[]) => void) => {
+  const newLayout = [...layout]
+  const index = newLayout.findIndex(l => l.id === item.id)
+  if (index !== -1) {
+    newLayout[index] = {
+      ...newLayout[index],
+      properties: {
+        ...newLayout[index].properties,
+        width: getSnapPosition(parseInt(ref.style.width)),
+        height: getSnapPosition(parseInt(ref.style.height)),
+        x: getSnapPosition(position.x),
+        y: getSnapPosition(position.y)
+      }
+    }
+  }
+  setLayout(newLayout)
+}
 
 const COMPONENTS: DraggableComponentType[] = [
   {
@@ -669,13 +719,7 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
             {/* Sonsuz canvas alanı */}
             <div 
               className="relative w-[3000px] h-[3000px] bg-muted/5 rounded-lg"
-              style={{
-                backgroundImage: `
-                  linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px),
-                  linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px)
-                `,
-                backgroundSize: '20px 20px'
-              }}
+              style={gridStyle}
               ref={gridRef}
               onClick={handleCanvasClick}
             >
@@ -698,36 +742,10 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
                     height: item.properties.height
                   }}
                   onDragStop={(e, d) => {
-                    const newLayout = [...layout]
-                    const index = newLayout.findIndex(l => l.id === item.id)
-                    if (index !== -1) {
-                      newLayout[index] = {
-                        ...newLayout[index],
-                        properties: {
-                          ...newLayout[index].properties,
-                          x: d.x,
-                          y: d.y
-                        }
-                      }
-                    }
-                    setLayout(newLayout)
+                    handleDragStop(e, d, item, layout, setLayout)
                   }}
                   onResizeStop={(e, direction, ref, delta, position) => {
-                    const newLayout = [...layout]
-                    const index = newLayout.findIndex(l => l.id === item.id)
-                    if (index !== -1) {
-                      newLayout[index] = {
-                        ...newLayout[index],
-                        properties: {
-                          ...newLayout[index].properties,
-                          width: parseInt(ref.style.width),
-                          height: parseInt(ref.style.height),
-                          x: position.x,
-                          y: position.y
-                        }
-                      }
-                    }
-                    setLayout(newLayout)
+                    handleResizeStop(e, direction, ref, delta, position, item, layout, setLayout)
                   }}
                   onClick={(e: React.MouseEvent) => {
                     handleComponentSelect(item.id)

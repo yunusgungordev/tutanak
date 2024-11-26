@@ -212,31 +212,54 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
 
   const fieldTemplates = [
     {
-      name: "ad_soyad",
-      label: "Ad Soyad",
+      name: "metin",
+      label: "Metin Alanı",
       type: "text",
-      required: true,
+      required: false,
       options: {
-        minLength: 2,
-        maxLength: 50
+        minLength: 0,
+        maxLength: 1000,
+        multiline: false
       }
     },
     {
-      name: "email",
-      label: "E-posta",
-      type: "text",
-      required: true,
+      name: "numara",
+      label: "Sayısal Alan",
+      type: "number",
+      required: false,
       options: {
-        pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+        min: 0,
+        max: 999999,
+        step: 1
       }
     },
     {
-      name: "telefon",
-      label: "Telefon",
-      type: "text",
-      required: true,
+      name: "tarih",
+      label: "Tarih",
+      type: "date",
+      required: false,
       options: {
-        pattern: "^[0-9]{10}$"
+        minDate: null,
+        maxDate: null
+      }
+    },
+    {
+      name: "secim",
+      label: "Seçim Listesi",
+      type: "select",
+      required: false,
+      options: {
+        choices: [],
+        multiple: false
+      }
+    },
+    {
+      name: "onay",
+      label: "Onay Kutusu",
+      type: "checkbox",
+      required: false,
+      options: {
+        defaultValue: false
       }
     }
   ]
