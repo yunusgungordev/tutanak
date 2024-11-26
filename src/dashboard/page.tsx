@@ -82,7 +82,13 @@ export default function DashboardPage() {
 
 function TabContent() {
   const { activeTab } = useTabContext()
-  return React.createElement(activeTab.component, {
-    label: activeTab.label
-  })
+  const props = {
+    label: activeTab.label,
+    layout: activeTab.layout,
+    fields: activeTab.fields,
+    database: activeTab.database,
+    id: activeTab.id,
+    type: activeTab.type
+  }
+  return React.createElement(activeTab.component, props)
 }

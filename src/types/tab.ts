@@ -7,6 +7,12 @@ export type TabContent = {
   component: React.ComponentType<{ label: string }>
   icon: React.ReactNode
   label: string
+  layout?: LayoutConfig[]
+  fields?: Field[]
+  database?: {
+    table_name: string
+    fields: Field[]
+  }
 } 
 
 export interface DynamicTabConfig {
@@ -15,7 +21,7 @@ export interface DynamicTabConfig {
   type: string;
   layout: LayoutConfig[];
   database: {
-    tableName: string;
+    table_name: string;
     fields: Field[];
   };
   created_at?: string;

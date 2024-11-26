@@ -1,9 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DraggableComponentType } from "@/types/component"
-import { LayoutConfig, Field } from "@/types/tab"
+import { LayoutConfig, Field, TabContent } from "@/types/tab"
 import { FormInput as InputIcon, Type, Table, ListTodo, Square } from "lucide-react"
 import { useTabContext } from "@/contexts/tab-context"
 import { toast } from "react-hot-toast"
@@ -449,16 +449,43 @@ function PropertiesPanel({
   )
 }
 
-export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
-  const [layout, setLayout] = useState<LayoutConfig[]>([])
-  const [label, setLabel] = useState("")
-  const [fields, setFields] = useState<Field[]>([])
-  const [isModelOpen, setIsModelOpen] = useState(true)
-  const [isComponentsOpen, setIsComponentsOpen] = useState(true)
-  const gridRef = useRef<HTMLDivElement>(null)
-  const { saveDynamicTab } = useTabContext()
-  const [selectedComponent, setSelectedComponent] = useState<string | null>(null)
+export function CreateTabDialog({ 
+  open, 
+  onOpenChange,
+  editMode = false,
+  tabToEdit = null
+}: { 
+  open: boolean, 
+  onOpenChange: (open: boolean) => void,
+  editMode?: boolean,
+  tabToEdit?: TabContent | null
+}) {
+  const [layout, setLayout] = useState<LayoutConfig[]>([]);
+  const [label, setLabel] = useState("");
+  const [fields, setFields] = useState<Field[]>([]);
+  const [isModelOpen, setIsModelOpen] = useState(true);
+  const [isComponentsOpen, setIsComponentsOpen] = useState(true);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const { saveDynamicTab, updateTab, tabs } = useTabContext();
+  const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
   
+  // Düzenleme modu için mevcut verileri yükle
+  useEffect(() => {
+    if (editMode && tabToEdit && tabToEdit.type === "dynamic") {
+      setLabel(tabToEdit.label);
+      // @ts-ignore
+      setLayout(Array.isArray(tabToEdit.layout) ? tabToEdit.layout : []);
+      // @ts-ignore
+      setFields(Array.isArray(tabToEdit.fields) ? tabToEdit.fields : []);
+    } else {
+      // Yeni tab oluşturma modunda state'i sıfırla
+      setLabel("");
+      setLayout([]);
+      setFields([]);
+      setSelectedComponent(null);
+    }
+  }, [editMode, tabToEdit, open]);
+
   // Çakışma kontrolü
   const checkCollision = (newItem: any, existingItems: any[]) => {
     const buffer = 10 // Minimum boşluk
@@ -511,31 +538,55 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
 
   const handleSave = async () => {
     if (!label) {
-      toast.error("Tab başlığı gereklidir")
-      return
+      toast.error("Tab başlığı gereklidir");
+      return;
     }
 
     if (layout.length === 0) {
-      toast.error("En az bir bileşen eklemelisiniz")
-      return
+      toast.error("En az bir bileşen eklemelisiniz");
+      return;
     }
 
     try {
-      await saveDynamicTab({
-        id: crypto.randomUUID(),
-        label,
-        type: "dynamic",
-        layout,
-        database: {
-          tableName: label.toLowerCase().replace(/\s+/g, '_'),
+      if (editMode && tabToEdit) {
+        // Düzenleme modu - mevcut tabı güncelle
+        await updateTab(tabToEdit.id, {
+          label,
+          layout,
           fields
+        });
+        onOpenChange(false);
+        toast.success("Tab başarıyla güncellendi");
+      } else {
+        // Yeni tab oluştur
+        const tabId = crypto.randomUUID();
+        const config = {
+          id: tabId,
+          label,
+          type: "dynamic",
+          layout,
+          database: {
+            table_name: label.toLowerCase().replace(/\s+/g, '_'),
+            fields
+          }
+        };
+
+        const result = await saveDynamicTab(config);
+        
+        if (result) {
+          onOpenChange(false);
+          toast.success("Tab başarıyla oluşturuldu");
         }
-      })
-      
-      onOpenChange(false)
-      toast.success("Tab başarıyla oluşturuldu")
+      }
+
+      // Form alanlarını temizle
+      setLayout([]);
+      setFields([]);
+      setLabel("");
+      setSelectedComponent(null);
     } catch (error) {
-      toast.error("Tab oluşturulurken bir hata oluştu")
+      const errorMessage = editMode ? "Tab güncellenirken bir hata oluştu" : "Tab oluşturulurken bir hata oluştu";
+      toast.error(errorMessage);
     }
   }
 
@@ -582,11 +633,31 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
     setLayout(newLayout)
   }
 
+  const handleUpdateLayout = (newLayout: LayoutConfig[]) => {
+    setLayout(newLayout);
+    if (selectedComponent) {
+      const tab = tabs.find((t: TabContent) => t.id === selectedComponent);
+      if (tab?.type === "dynamic") {
+        updateTab(tab.id, { layout: newLayout });
+      }
+    }
+  }
+
+  const handleUpdateFields = (newFields: Field[]) => {
+    setFields(newFields);
+    if (selectedComponent) {
+      const tab = tabs.find((t: TabContent) => t.id === selectedComponent);
+      if (tab?.type === "dynamic") {
+        updateTab(tab.id, { fields: newFields });
+      }
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[90vw] max-h-[90vh] h-[800px] flex flex-col overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle>Yeni Tab Oluştur</DialogTitle>
+          <DialogTitle>{editMode ? "Tab Düzenle" : "Yeni Tab Oluştur"}</DialogTitle>
           <Input
             placeholder="Tab Başlığı"
             value={label}
@@ -600,14 +671,16 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
           <div className="w-[250px] border-r flex flex-col h-full">
             {/* Model Bölümü */}
             <Collapsible open={isModelOpen} onOpenChange={setIsModelOpen} className="min-h-0">
-              <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border-b bg-muted/30 sticky top-0 z-10">
-                <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4" />
-                  <span className="font-medium">Model</span>
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between w-full p-4 border-b bg-muted/30 sticky top-0 z-10 cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <Database className="w-4 h-4" />
+                    <span className="font-medium">Model</span>
+                  </div>
+                  <div className="h-6 w-6 p-0">
+                    {isModelOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </div>
                 </div>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                  {isModelOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                </Button>
               </CollapsibleTrigger>
               <CollapsibleContent className="overflow-y-auto max-h-[300px] scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
                 <div className="p-4">
@@ -778,7 +851,9 @@ export function CreateTabDialog({ open, onOpenChange }: { open: boolean, onOpenC
 
         <DialogFooter className="px-6 py-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>
-          <Button onClick={handleSave} disabled={!label || layout.length === 0}>Kaydet</Button>
+          <Button onClick={handleSave}>
+            {editMode ? "Güncelle" : "Oluştur"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

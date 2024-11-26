@@ -5,6 +5,8 @@ import { useState } from "react"
 import { CreateTabDialog } from "@/dashboard/components/create-tab-dialog"
 import { DeleteTabDialog } from "@/dashboard/components/delete-tab-dialog"
 import { useTabContext } from "@/contexts/tab-context"
+import { toast } from "react-hot-toast"
+import { TabContent } from "@/types/tab"
 
 export function TabBar() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -13,17 +15,12 @@ export function TabBar() {
   const [editingTabName, setEditingTabName] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [tabToDelete, setTabToDelete] = useState<{ id: string; label: string } | null>(null)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [tabToEdit, setTabToEdit] = useState<TabContent | null>(null)
 
-  const handleEditTab = (tab: { id: string; label: string }) => {
-    setEditingTabId(tab.id)
-    setEditingTabName(tab.label)
-  }
-
-  const handleUpdateTab = (tabId: string) => {
-    if (!editingTabName.trim()) return
-    updateTab(tabId, editingTabName.trim())
-    setEditingTabId(null)
-    setEditingTabName("")
+  const handleEditTab = (tab: TabContent) => {
+    setTabToEdit(tab)
+    setEditDialogOpen(true)
   }
 
   const handleDeleteClick = (e: React.MouseEvent, tab: { id: string; label: string }) => {
@@ -62,20 +59,7 @@ export function TabBar() {
               onClick={() => setActiveTab(tab)}
             >
               {tab.icon}
-              {editingTabId === tab.id ? (
-                <input
-                  type="text"
-                  value={editingTabName}
-                  onChange={(e) => setEditingTabName(e.target.value)}
-                  onBlur={() => handleUpdateTab(tab.id)}
-                  onKeyDown={(e) => e.key === "Enter" && handleUpdateTab(tab.id)}
-                  className="w-full px-1 py-0.5 text-xs bg-background border rounded text-foreground"
-                  autoFocus
-                  onClick={(e) => e.stopPropagation()}
-                />
-              ) : (
-                <span className="text-xs">{tab.label}</span>
-              )}
+              <span className="text-xs">{tab.label}</span>
             </Button>
             
             {!isDefaultTab(tab.type) && (
@@ -118,6 +102,15 @@ export function TabBar() {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
       />
+
+      {tabToEdit && (
+        <CreateTabDialog 
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          editMode={true}
+          tabToEdit={tabToEdit}
+        />
+      )}
 
       {tabToDelete && (
         <DeleteTabDialog

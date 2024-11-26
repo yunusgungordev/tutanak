@@ -361,6 +361,31 @@ async fn delete_tab(id: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+async fn update_tab(tab_data: TabData) -> Result<bool, String> {
+    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    
+    // Layout ve database verilerini JSON'a dönüştür
+    let layout_json = serde_json::to_string(&tab_data.layout)
+        .map_err(|e| format!("Layout JSON dönüşüm hatası: {}", e))?;
+    
+    let database_json = serde_json::to_string(&tab_data.database)
+        .map_err(|e| format!("Database JSON dönüşüm hatası: {}", e))?;
+    
+    // Tab'ı güncelle
+    conn.execute(
+        "UPDATE tabs SET label = ?1, layout = ?2, database = ?3 WHERE id = ?4",
+        (
+            &tab_data.label,
+            &layout_json,
+            &database_json,
+            &tab_data.id,
+        ),
+    ).map_err(|e| e.to_string())?;
+
+    Ok(true)
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -369,16 +394,13 @@ fn main() {
             save_note, 
             get_notes, 
             save_template, 
-            get_templates, 
-            delete_template, 
+            get_templates,
+            delete_template,
             create_dynamic_tab,
             get_tabs,
-            delete_tab
+            delete_tab,
+            update_tab
         ])
-        .plugin(tauri_plugin_app::init())
-        .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_window::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
