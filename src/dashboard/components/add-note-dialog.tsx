@@ -92,7 +92,7 @@ export function AddNoteDialog() {
       <DialogTrigger asChild>
         <Button variant="default" size="sm">Not Ekle</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Yeni Not</DialogTitle>
         </DialogHeader>
@@ -125,8 +125,8 @@ export function AddNoteDialog() {
               <SelectItem value="high">Yüksek Öncelik</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex flex-col gap-2">
-            <label className="text-sm">Tarih ve Saat</label>
+          <div className="flex flex-col gap-2 items-center">
+            <label>Tarih ve Saat</label>
             <Calendar
               mode="single"
               selected={date}
