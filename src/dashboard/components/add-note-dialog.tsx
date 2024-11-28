@@ -120,9 +120,9 @@ export function AddNoteDialog() {
               <SelectValue placeholder="Öncelik" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="low">Düşük</SelectItem>
-              <SelectItem value="medium">Orta</SelectItem>
-              <SelectItem value="high">Yüksek</SelectItem>
+              <SelectItem value="low">Düşük Öncelik</SelectItem>
+              <SelectItem value="medium">Orta Öncelik</SelectItem>
+              <SelectItem value="high">Yüksek Öncelik</SelectItem>
             </SelectContent>
           </Select>
           <div className="flex flex-col gap-2">

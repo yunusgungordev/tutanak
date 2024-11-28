@@ -281,12 +281,14 @@ export function Timeline() {
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <span className={cn(
-                                    "text-xs px-1.5 py-0.5 rounded-full",
+                                    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                                     note.priority === "high" ? "bg-red-100 text-red-800" :
                                     note.priority === "medium" ? "bg-yellow-100 text-yellow-800" :
                                     "bg-green-100 text-green-800"
                                   )}>
-                                    {note.priority}
+                                    {note.priority === "high" ? "Yüksek" :
+                                     note.priority === "medium" ? "Orta" :
+                                     "Düşük"}
                                   </span>
                                   {note.status === "completed" && (
                                     <CheckCircle className="w-3 h-3 text-green-500" />
