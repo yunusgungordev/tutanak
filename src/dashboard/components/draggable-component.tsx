@@ -1,7 +1,6 @@
 import { useInteractable } from "@/hooks/use-interactable"
 import { cn } from "@/lib/utils"
 import { LayoutConfig } from "@/types/tab"
-import { TaskMenu } from "@/dashboard/components/task-menu"
 import { ComponentProperties } from "@/types/component"
 
 interface DraggableComponentProps {
@@ -112,7 +111,6 @@ export function DraggableComponent({
         selectedComponent === item.id && "ring-2 ring-primary shadow-[0_8px_16px_rgba(0,0,0,0.2)]"
       )}
     >
-      <TaskMenu item={item} onUpdate={handleTaskUpdate} />
       {renderComponentPreview(item)}
     </div>
   )
