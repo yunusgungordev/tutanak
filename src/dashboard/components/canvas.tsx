@@ -48,24 +48,7 @@ export function Canvas({
     }
   }
 
-  const handleTableRender = (item: LayoutConfig) => {
-    if (item.type === "table") {
-      return (
-        <div 
-          className="absolute"
-          style={{
-            width: item.properties.width,
-            height: item.properties.height,
-            left: item.properties.x,
-            top: item.properties.y,
-          }}
-        >
-          {renderComponentPreview(item)}
-        </div>
-      );
-    }
-    return null;
-  };
+  const maxY = Math.max(...layout.map(item => item.properties.y + item.properties.height), 600)
 
   return (
     <div 
@@ -80,10 +63,11 @@ export function Canvas({
         ref={visibleAreaRef}
         className="absolute bg-background/50"
         style={{
-          width: VISIBLE_GRID.width,
-          height: VISIBLE_GRID.height,
-          left: VISIBLE_GRID.padding,
-          top: VISIBLE_GRID.padding,
+          width: "100%",
+          minWidth: VISIBLE_GRID.width + (VISIBLE_GRID.padding * 2),
+          height: maxY + VISIBLE_GRID.padding * 2,
+          left: 0,
+          top: 0,
           backgroundImage: gridStyle.backgroundImage,
           backgroundSize: gridStyle.backgroundSize
         }}
@@ -99,7 +83,7 @@ export function Canvas({
             renderComponentPreview={renderComponentPreview}
             gridBounds={{
               width: VISIBLE_GRID.width,
-              height: VISIBLE_GRID.height,
+              height: maxY,
               padding: VISIBLE_GRID.padding
             }}
           />

@@ -1,18 +1,32 @@
 import { useEffect, useRef } from 'react'
 import interact from 'interactjs'
 
+interface GridBounds {
+  width: number | string
+  height: number | string
+  padding: number
+}
+
 export function useInteractable(
-  itemId: string,
-  onDragEnd: Function,
-  onResizeEnd: Function,
-  x: number,
-  y: number,
-  gridBounds: { width: number; height: number; padding: number }
+  id: string,
+  onDragEnd: (x: number, y: number) => void,
+  onResizeEnd: (width: number, height: number, x: number, y: number) => void,
+  initialX: number,
+  initialY: number,
+  gridBounds: GridBounds
 ) {
   const elementRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!elementRef.current) return
+
+    const maxWidth = typeof gridBounds.width === 'string' ? 
+      elementRef.current.parentElement?.clientWidth || 800 : 
+      gridBounds.width
+
+    const maxHeight = typeof gridBounds.height === 'string' ? 
+      elementRef.current.parentElement?.clientHeight || 600 : 
+      gridBounds.height
 
     const interactable = interact(elementRef.current)
       .draggable({
@@ -27,7 +41,8 @@ export function useInteractable(
           }),
           interact.modifiers.restrict({
             restriction: 'parent',
-            elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
+            elementRect: { top: 0, left: 0, bottom: 1, right: 1 },
+            endOnly: true
           })
         ],
         listeners: {
@@ -70,18 +85,12 @@ export function useInteractable(
     return () => {
       interactable.unset()
     }
-  }, [itemId, onDragEnd, onResizeEnd, gridBounds])
+  }, [id, onDragEnd, onResizeEnd, gridBounds])
 
   function dragMoveListener(event: any) {
     const target = event.target
-    const x = Math.min(
-      Math.max(0, (parseFloat(target.getAttribute('data-x')) || 0) + event.dx),
-      gridBounds.width - parseFloat(target.style.width)
-    )
-    const y = Math.min(
-      Math.max(0, (parseFloat(target.getAttribute('data-y')) || 0) + event.dy),
-      gridBounds.height - parseFloat(target.style.height)
-    )
+    const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx
+    const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy
 
     target.style.transform = `translate(${x}px, ${y}px)`
     target.setAttribute('data-x', x.toString())
