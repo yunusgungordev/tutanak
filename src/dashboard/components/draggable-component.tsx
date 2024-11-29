@@ -2,6 +2,7 @@ import { useInteractable } from "@/hooks/use-interactable"
 import { cn } from "@/lib/utils"
 import { LayoutConfig } from "@/types/tab"
 import { ComponentProperties } from "@/types/component"
+import { X } from "lucide-react"
 
 interface DraggableComponentProps {
   item: LayoutConfig
@@ -15,6 +16,7 @@ interface DraggableComponentProps {
     height: number
     padding: number
   }
+  onDelete: (id: string) => void
 }
 
 const GRID_SNAP = 10
@@ -66,7 +68,8 @@ export function DraggableComponent({
   selectedComponent,
   onSelect,
   renderComponentPreview,
-  gridBounds
+  gridBounds,
+  onDelete
 }: DraggableComponentProps) {
   const ref = useInteractable(
     item.id,
@@ -105,12 +108,29 @@ export function DraggableComponent({
         cursor: 'grab',
         userSelect: 'none'
       }}
-      onClick={() => onSelect(item.id)}
+      onClick={(e) => {
+        e.stopPropagation()
+        onSelect(item.id)
+      }}
       className={cn(
-        "hover:ring-2 ring-primary/50 rounded-md transition-all duration-200 shadow-[0_4px_12px_rgba(0,0,0,0.15)] bg-background relative",
-        selectedComponent === item.id && "ring-2 ring-primary shadow-[0_8px_16px_rgba(0,0,0,0.2)]"
+        "group hover:ring-2 ring-primary/50 rounded-md transition-all duration-200 shadow-sm bg-background relative",
+        selectedComponent === item.id && "ring-2 ring-primary"
       )}
     >
+      <div className={cn(
+        "absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+        selectedComponent === item.id && "opacity-100"
+      )}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(item.id)
+          }}
+          className="h-5 w-5 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full flex items-center justify-center shadow-sm"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
       {renderComponentPreview(item)}
     </div>
   )

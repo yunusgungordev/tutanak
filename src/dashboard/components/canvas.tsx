@@ -50,6 +50,11 @@ export function Canvas({
 
   const maxY = Math.max(...layout.map(item => item.properties.y + item.properties.height), 600)
 
+  const handleDeleteComponent = (componentId: string) => {
+    setLayout(layout.filter(item => item.id !== componentId))
+    onSelect("") // Seçimi temizle
+  }
+
   return (
     <div 
       className={cn(
@@ -81,6 +86,7 @@ export function Canvas({
             selectedComponent={selectedComponent}
             onSelect={onSelect}
             renderComponentPreview={renderComponentPreview}
+            onDelete={handleDeleteComponent}
             gridBounds={{
               width: VISIBLE_GRID.width,
               height: maxY,
