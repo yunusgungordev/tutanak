@@ -147,7 +147,10 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
       type: "dynamic",
       component: DynamicTabRenderer,
       icon: <Layout className="w-4 h-4" />,
-      label: config.label
+      label: config.label,
+      layout: config.layout,
+      fields: config.fields,
+      database: config.database
     }
     setTabs(prev => [...prev, newTab])
     setActiveTab(newTab)
@@ -163,9 +166,9 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
           ...item,
           properties: {
             ...item.properties,
-            isVisible: true,
+            headers: item.type === "table" ? item.properties.headers || [] : undefined,
             rows: item.type === "table" ? item.properties.rows || [[]] : undefined,
-            headers: item.type === "table" ? item.properties.headers || [] : undefined
+            isVisible: true
           }
         })),
         database: {

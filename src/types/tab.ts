@@ -20,6 +20,7 @@ export interface DynamicTabConfig {
   label: string;
   type: string;
   layout: LayoutConfig[];
+  fields: Field[];
   database: {
     table_name: string;
     fields: Field[];

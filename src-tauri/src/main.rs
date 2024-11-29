@@ -68,7 +68,10 @@ struct Properties {
     height: i32,
     label: Option<String>,
     placeholder: Option<String>,
-    options: Option<Vec<String>>
+    options: Option<Vec<String>>,
+    headers: Option<Vec<String>>,
+    rows: Option<Vec<Vec<String>>>,
+    isVisible: Option<bool>
 }
 
 #[derive(Debug, Serialize, Deserialize)]
