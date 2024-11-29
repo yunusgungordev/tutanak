@@ -6,6 +6,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Button } from "@/components/ui/button"
 import { Pencil, Plus, X, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 
 interface DynamicComponentProps {
   config: LayoutConfig;
@@ -159,6 +160,17 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
     }
   };
 
+  // Tablo için stil tanımlamaları
+  const tableStyles = {
+    table: "min-w-full border-collapse bg-white",
+    thead: "bg-gray-100",
+    th: "px-4 py-2 text-left text-sm font-semibold text-gray-600 border-b border-gray-200",
+    tr: "hover:bg-gray-50 transition-colors",
+    td: "px-4 py-2 text-sm text-gray-700 border-b border-gray-200",
+    input: "w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-ring rounded px-1",
+    rowNumber: "w-10 px-4 py-2 text-sm text-gray-500 border-b border-gray-200 bg-gray-50 text-center font-mono"
+  };
+
   const renderContent = () => {
     switch (config.type) {
       case 'input':
@@ -209,16 +221,28 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
         );
       case "table":
         return (
-          <div style={style} className="border rounded-md bg-card">
-            <div className="p-2 border-b bg-muted/30">
+          <div className="border rounded-md bg-card shadow-sm">
+            <div className="p-3 border-b bg-muted/30 flex justify-between items-center">
               <span className="text-sm font-medium">{config.properties.label}</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAddRow}
+                  className="h-7"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Yeni Satır
+                </Button>
+              </div>
             </div>
-            <div className="p-2 overflow-auto">
-              <table className="w-full">
-                <thead>
+            <div className="overflow-x-auto">
+              <table className={tableStyles.table}>
+                <thead className={tableStyles.thead}>
                   <tr>
+                    <th className={tableStyles.rowNumber}>#</th>
                     {config.properties.headers?.map((header, index) => (
-                      <th key={index} className="p-2 text-sm font-medium text-left border-b">
+                      <th key={index} className={tableStyles.th}>
                         {header}
                       </th>
                     ))}
@@ -227,9 +251,10 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
                 </thead>
                 <tbody>
                   {config.properties.rows?.map((row, rowIndex) => (
-                    <tr key={rowIndex}>
+                    <tr key={rowIndex} className={tableStyles.tr}>
+                      <td className={tableStyles.rowNumber}>{rowIndex + 1}</td>
                       {row.map((cell, cellIndex) => (
-                        <td key={cellIndex} className="p-2 text-sm border-b">
+                        <td key={cellIndex} className={tableStyles.td}>
                           <input
                             type="text"
                             value={cell}
@@ -245,44 +270,35 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
                                 }
                               };
 
-                              const updatedLayout = activeTab?.layout?.map(item =>
-                                item.id === config.id ? updatedConfig : item
-                              );
-
                               if (activeTab) {
+                                const updatedLayout = activeTab.layout?.map(item =>
+                                  item.id === config.id ? updatedConfig : item
+                                );
+
                                 updateTab(activeTab.id, {
                                   ...activeTab,
                                   layout: updatedLayout
                                 });
                               }
                             }}
-                            className="w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-ring rounded px-1"
+                            className={tableStyles.input}
                           />
                         </td>
                       ))}
-                      <td className="p-2 w-16">
+                      <td className={cn(tableStyles.td, "text-center")}>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDeleteRow(rowIndex)}
-                          className="h-6 w-6 p-0"
+                          className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
                         >
-                          <Trash2 className="w-4 h-4 text-destructive" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAddRow}
-                className="w-full mt-2"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Yeni Satır
-              </Button>
             </div>
           </div>
         );
