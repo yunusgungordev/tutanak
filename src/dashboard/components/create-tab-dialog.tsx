@@ -569,14 +569,8 @@ export function CreateTabDialog({
       setLayout(Array.isArray(tabToEdit.layout) ? tabToEdit.layout : []);
       // @ts-ignore
       setFields(Array.isArray(tabToEdit.fields) ? tabToEdit.fields : []);
-    } else {
-      // Yeni tab oluşturma modunda state'i sıfırla
-      setLabel("");
-      setLayout([]);
-      setFields([]);
-      setSelectedComponent(null);
     }
-  }, [editMode, tabToEdit, open]);
+  }, [editMode, tabToEdit, open, tabToEdit?.layout]);
 
   // Çakışma kontrolü
   const checkCollision = (newItem: any, existingItems: any[]) => {

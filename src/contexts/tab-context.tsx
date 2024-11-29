@@ -33,7 +33,7 @@ export type TabContent = {
   component: React.ComponentType<any>;
   icon: React.ReactNode;
   label: string;
-  layout?: LayoutConfig[];
+  layout: LayoutConfig[];
   fields?: Field[];
   database?: {
     table_name: string;
@@ -48,14 +48,16 @@ const defaultTabs: TabContent[] = [
     type: "overview",
     component: Overview as unknown as React.ComponentType<DynamicTabProps>,
     icon: <FileText className="w-4 h-4" />,
-    label: "Matbu Cümleler"
+    label: "Matbu Cümleler",
+    layout: []
   },
   {
     id: "gorev-listesi",
     type: "task-list",
     component: TaskList as unknown as React.ComponentType<DynamicTabProps>,
     icon: <ListTodo className="w-4 h-4" />,
-    label: "Görev Listesi"
+    label: "Görev Listesi",
+    layout: []
   }
 ]
 
@@ -68,6 +70,7 @@ interface TabContextType {
   setActiveTab: (tab: TabContent) => void
   removeTab: (tabId: string) => void
   updateTab: (tabId: string, config: TabUpdateConfig) => void
+  updateLayout: (tabId: string, newLayout: LayoutConfig[]) => void
 }
 
 const TabContext = createContext<TabContextType | undefined>(undefined)
@@ -278,6 +281,17 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const updateLayout = (tabId: string, newLayout: LayoutConfig[]) => {
+    setTabs(prev => prev.map(tab => 
+      tab.id === tabId 
+        ? { 
+            ...tab, 
+            layout: newLayout || []
+          }
+        : tab
+    ));
+  };
+
   return (
     <TabContext.Provider value={{ 
       tabs, 
@@ -287,7 +301,8 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
       updateDynamicTab,
       setActiveTab,
       removeTab,
-      updateTab
+      updateTab,
+      updateLayout
     }}>
       {children}
     </TabContext.Provider>

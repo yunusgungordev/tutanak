@@ -14,7 +14,7 @@ interface DynamicComponentProps {
 }
 
 export function DynamicComponent({ config, fields }: DynamicComponentProps) {
-  const { setActiveTab, tabs, updateTab, activeTab } = useTabContext();
+  const { setActiveTab, tabs, updateTab, activeTab, updateLayout } = useTabContext();
   const [isEditing, setIsEditing] = useState(false);
 
   const style = {
@@ -54,7 +54,7 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
   };
 
   const handleHeaderChange = async (index: number, value: string) => {
-    if (config.type === "table" && activeTab) {
+    if (config.type === "table" && activeTab?.layout) {
       try {
         const updatedHeaders = [...(config.properties.headers || [])];
         updatedHeaders[index] = value;
@@ -67,7 +67,7 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
           }
         };
 
-        const updatedLayout = activeTab.layout?.map(item =>
+        const updatedLayout = activeTab.layout.map(item =>
           item.id === config.id ? updatedConfig : item
         );
 
@@ -75,6 +75,8 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
           ...activeTab,
           layout: updatedLayout
         });
+
+        updateLayout(activeTab.id, updatedLayout);
 
         toast.success("Başlık güncellendi");
       } catch (error) {
@@ -136,16 +138,16 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
           }
         };
 
-        // Layout içindeki ilgili tabloyu güncelle
         const updatedLayout = activeTab.layout?.map(item =>
           item.id === config.id ? updatedConfig : item
         );
 
-        // Tab'ı güncelle
         await updateTab(activeTab.id, {
           ...activeTab,
           layout: updatedLayout
         });
+
+        updateLayout(activeTab.id, updatedLayout);
 
         toast.success("Yeni satır eklendi");
       } catch (error) {
