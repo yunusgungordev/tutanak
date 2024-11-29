@@ -619,6 +619,7 @@ export function CreateTabDialog({
   const gridRef = useRef<HTMLDivElement>(null);
   const { saveDynamicTab, updateTab, tabs } = useTabContext();
   const [selectedComponent, setSelectedComponent] = useState<string | null>(null);
+  const [activePanel, setActivePanel] = useState<'model' | 'components' | null>('components');
   
   // Düzenleme modu için mevcut verileri yükle
   useEffect(() => {
@@ -795,7 +796,11 @@ export function CreateTabDialog({
           {/* Sol Panel */}
           <div className="w-[250px] border-r flex flex-col h-full">
             {/* Model Bölümü */}
-            <Collapsible open={isModelOpen} onOpenChange={setIsModelOpen} className="min-h-0">
+            <Collapsible 
+              open={activePanel === 'model'} 
+              onOpenChange={() => setActivePanel(activePanel === 'model' ? null : 'model')} 
+              className="min-h-0"
+            >
               <CollapsibleTrigger asChild>
                 <div className="flex items-center justify-between w-full p-4 border-b bg-muted/30 sticky top-0 z-10 cursor-pointer">
                   <div className="flex items-center gap-2">
@@ -803,11 +808,11 @@ export function CreateTabDialog({
                     <span className="font-medium">Model</span>
                   </div>
                   <div className="h-6 w-6 p-0">
-                    {isModelOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    {activePanel === 'model' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </div>
                 </div>
               </CollapsibleTrigger>
-              <CollapsibleContent className="overflow-y-auto max-h-[300px] scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
+              <CollapsibleContent className="overflow-y-auto max-h-[200px] scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
                 <div className="p-4">
                   <ModelPanel onFieldsChange={setFields} />
                 </div>
@@ -815,14 +820,18 @@ export function CreateTabDialog({
             </Collapsible>
 
             {/* Bileşenler Bölümü */}
-            <Collapsible open={isComponentsOpen} onOpenChange={setIsComponentsOpen} className="min-h-0 flex-1 flex flex-col">
+            <Collapsible 
+              open={activePanel === 'components'} 
+              onOpenChange={() => setActivePanel(activePanel === 'components' ? null : 'components')} 
+              className="min-h-0 flex-1 flex flex-col"
+            >
               <CollapsibleTrigger className="flex items-center justify-between w-full p-4 border-b bg-muted/30 sticky top-0 z-10">
                 <div className="flex items-center gap-2">
                   <LayoutGrid className="w-4 h-4" />
                   <span className="font-medium">Bileşenler</span>
                 </div>
                 <div className="h-6 w-6 p-0">
-                  {isComponentsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  {activePanel === 'components' ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent className="flex-1 min-h-0 overflow-hidden">
