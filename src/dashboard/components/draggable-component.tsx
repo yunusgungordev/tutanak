@@ -11,8 +11,11 @@ interface DraggableComponentProps {
   selectedComponent: string | null
   onSelect: (id: string) => void
   renderComponentPreview: (item: LayoutConfig) => React.ReactNode
-  gridWidth: number
-  gridHeight: number
+  gridBounds: {
+    width: number
+    height: number
+    padding: number
+  }
 }
 
 const GRID_SNAP = 10
@@ -64,8 +67,7 @@ export function DraggableComponent({
   selectedComponent,
   onSelect,
   renderComponentPreview,
-  gridWidth,
-  gridHeight
+  gridBounds
 }: DraggableComponentProps) {
   const ref = useInteractable(
     item.id,
@@ -73,7 +75,8 @@ export function DraggableComponent({
     (width: number, height: number, x: number, y: number) => 
       handleResizeStop({ width, height, x, y }, item, layout, setLayout),
     item.properties.x,
-    item.properties.y
+    item.properties.y,
+    gridBounds
   )
 
   const handleTaskUpdate = (tasks: ComponentProperties['tasks']) => {

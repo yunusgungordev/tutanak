@@ -4,12 +4,6 @@
     windows_subsystem = "windows"
 )]
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 
@@ -389,7 +383,6 @@ async fn update_tab(tab_data: TabData) -> Result<bool, String> {
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
-            greet, 
             save_excel_data, 
             save_note, 
             get_notes, 

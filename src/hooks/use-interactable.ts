@@ -2,11 +2,12 @@ import { useEffect, useRef } from 'react'
 import interact from 'interactjs'
 
 export function useInteractable(
-  itemId: string, 
-  onDragEnd: Function, 
+  itemId: string,
+  onDragEnd: Function,
   onResizeEnd: Function,
-  initialX: number,
-  initialY: number
+  x: number,
+  y: number,
+  gridBounds: { width: number; height: number; padding: number }
 ) {
   const elementRef = useRef<HTMLDivElement>(null)
 
@@ -16,7 +17,6 @@ export function useInteractable(
     const interactable = interact(elementRef.current)
       .draggable({
         inertia: false,
-        autoScroll: true,
         modifiers: [
           interact.modifiers.snap({
             targets: [
@@ -31,15 +31,7 @@ export function useInteractable(
           })
         ],
         listeners: {
-          move(event) {
-            const target = event.target
-            const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx
-            const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy
-
-            target.style.transform = `translate(${x}px, ${y}px)`
-            target.setAttribute('data-x', x.toString())
-            target.setAttribute('data-y', y.toString())
-          },
+          move: dragMoveListener,
           end(event) {
             const target = event.target
             const x = parseFloat(target.getAttribute('data-x')) || 0
@@ -50,47 +42,26 @@ export function useInteractable(
       })
       .resizable({
         edges: { left: true, right: true, bottom: true, top: true },
-        margin: 5,
         modifiers: [
+          interact.modifiers.restrictEdges({
+            outer: 'parent',
+            endOnly: true
+          }),
           interact.modifiers.snap({
             targets: [
               interact.snappers.grid({ x: 10, y: 10 })
             ],
             range: 10
-          }),
-          interact.modifiers.restrictEdges({
-            outer: 'parent'
           })
         ],
         listeners: {
-          move(event) {
-            const target = event.target
-            let x = parseFloat(target.getAttribute('data-x')) || 0
-            let y = parseFloat(target.getAttribute('data-y')) || 0
-            let width = event.rect.width
-            let height = event.rect.height
-
-            if (event.edges.left) {
-              x += event.deltaRect.left
-            }
-            if (event.edges.top) {
-              y += event.deltaRect.top
-            }
-
-            target.style.width = `${width}px`
-            target.style.height = `${height}px`
-            target.style.transform = `translate(${x}px, ${y}px)`
-
-            target.setAttribute('data-x', x.toString())
-            target.setAttribute('data-y', y.toString())
-          },
+          move: resizeMoveListener,
           end(event) {
             const target = event.target
             const x = parseFloat(target.getAttribute('data-x')) || 0
             const y = parseFloat(target.getAttribute('data-y')) || 0
             const width = parseFloat(target.style.width)
             const height = parseFloat(target.style.height)
-            
             onResizeEnd(width, height, x, y)
           }
         }
@@ -99,7 +70,39 @@ export function useInteractable(
     return () => {
       interactable.unset()
     }
-  }, [itemId, onDragEnd, onResizeEnd])
+  }, [itemId, onDragEnd, onResizeEnd, gridBounds])
+
+  function dragMoveListener(event: any) {
+    const target = event.target
+    const x = Math.min(
+      Math.max(0, (parseFloat(target.getAttribute('data-x')) || 0) + event.dx),
+      gridBounds.width - parseFloat(target.style.width)
+    )
+    const y = Math.min(
+      Math.max(0, (parseFloat(target.getAttribute('data-y')) || 0) + event.dy),
+      gridBounds.height - parseFloat(target.style.height)
+    )
+
+    target.style.transform = `translate(${x}px, ${y}px)`
+    target.setAttribute('data-x', x.toString())
+    target.setAttribute('data-y', y.toString())
+  }
+
+  function resizeMoveListener(event: any) {
+    const target = event.target
+    let x = parseFloat(target.getAttribute('data-x')) || 0
+    let y = parseFloat(target.getAttribute('data-y')) || 0
+
+    target.style.width = `${event.rect.width}px`
+    target.style.height = `${event.rect.height}px`
+
+    x += event.deltaRect.left
+    y += event.deltaRect.top
+
+    target.style.transform = `translate(${x}px, ${y}px)`
+    target.setAttribute('data-x', x.toString())
+    target.setAttribute('data-y', y.toString())
+  }
 
   return elementRef
 }

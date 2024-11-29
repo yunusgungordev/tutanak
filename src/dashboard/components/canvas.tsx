@@ -25,6 +25,12 @@ const gridStyle = {
   backgroundSize: `${GRID_SNAP}px ${GRID_SNAP}px`
 }
 
+const VISIBLE_GRID = {
+  width: 800,
+  height: 600,
+  padding: 20
+}
+
 export function Canvas({ 
   layout, 
   setLayout, 
@@ -34,6 +40,7 @@ export function Canvas({
   isDialog = false 
 }: CanvasProps) {
   const gridRef = useRef<HTMLDivElement>(null)
+  const visibleAreaRef = useRef<HTMLDivElement>(null)
 
   const handleCanvasClick = (event: React.MouseEvent) => {
     if (event.target === gridRef.current) {
@@ -44,30 +51,41 @@ export function Canvas({
   return (
     <div 
       className={cn(
-        "relative bg-muted/5 rounded-lg",
-        isDialog ? "w-[3000px] h-[3000px]" : "w-full h-full min-h-[600px]"
+        "relative bg-muted/5 rounded-lg overflow-auto",
+        isDialog ? "w-[1000px] h-[700px]" : "w-full h-full min-h-[600px]"
       )}
-      style={gridStyle}
       ref={gridRef}
       onClick={handleCanvasClick}
     >
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-        <div className="w-full h-full border border-dashed border-muted-foreground/20" />
+      <div
+        ref={visibleAreaRef}
+        className="absolute bg-background/50"
+        style={{
+          width: VISIBLE_GRID.width,
+          height: VISIBLE_GRID.height,
+          left: VISIBLE_GRID.padding,
+          top: VISIBLE_GRID.padding,
+          backgroundImage: gridStyle.backgroundImage,
+          backgroundSize: gridStyle.backgroundSize
+        }}
+      >
+        {layout.map((item) => (
+          <DraggableComponent
+            key={item.id}
+            item={item}
+            layout={layout}
+            setLayout={setLayout}
+            selectedComponent={selectedComponent}
+            onSelect={onSelect}
+            renderComponentPreview={renderComponentPreview}
+            gridBounds={{
+              width: VISIBLE_GRID.width,
+              height: VISIBLE_GRID.height,
+              padding: VISIBLE_GRID.padding
+            }}
+          />
+        ))}
       </div>
-
-      {layout.map((item) => (
-        <DraggableComponent
-          key={item.id}
-          item={item}
-          layout={layout}
-          setLayout={setLayout}
-          selectedComponent={selectedComponent}
-          onSelect={onSelect}
-          renderComponentPreview={renderComponentPreview}
-          gridWidth={GRID_WIDTH}
-          gridHeight={GRID_HEIGHT}
-        />
-      ))}
     </div>
   )
 } 
