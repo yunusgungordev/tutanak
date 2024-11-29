@@ -53,10 +53,34 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
     });
   };
 
-  const handleHeaderChange = (index: number, value: string) => {
-    const newHeaders = [...(config.properties.headers || [])];
-    newHeaders[index] = value;
-    updateTableProperty('headers', newHeaders);
+  const handleHeaderChange = async (index: number, value: string) => {
+    if (config.type === "table" && activeTab) {
+      try {
+        const updatedHeaders = [...(config.properties.headers || [])];
+        updatedHeaders[index] = value;
+
+        const updatedConfig = {
+          ...config,
+          properties: {
+            ...config.properties,
+            headers: updatedHeaders
+          }
+        };
+
+        const updatedLayout = activeTab.layout?.map(item =>
+          item.id === config.id ? updatedConfig : item
+        );
+
+        await updateTab(activeTab.id, {
+          ...activeTab,
+          layout: updatedLayout
+        });
+
+        toast.success("Başlık güncellendi");
+      } catch (error) {
+        toast.error("Başlık güncellenirken bir hata oluştu");
+      }
+    }
   };
 
   const handleCellChange = (rowIndex: number, cellIndex: number, value: string) => {
@@ -243,7 +267,12 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
                     <th className={tableStyles.rowNumber}>#</th>
                     {config.properties.headers?.map((header, index) => (
                       <th key={index} className={tableStyles.th}>
-                        {header}
+                        <input
+                          type="text"
+                          value={header}
+                          onChange={(e) => handleHeaderChange(index, e.target.value)}
+                          className="w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-ring rounded px-1 font-semibold"
+                        />
                       </th>
                     ))}
                     <th className="w-16"></th>
