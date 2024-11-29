@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { LayoutConfig, Field } from '@/types/tab';
 import { useTabContext } from "@/contexts/tab-context";
 import { toast } from "react-hot-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Pencil, Plus, X, Trash2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
 
 interface DynamicComponentProps {
   config: LayoutConfig;
@@ -10,7 +13,8 @@ interface DynamicComponentProps {
 }
 
 export function DynamicComponent({ config, fields }: DynamicComponentProps) {
-  const { setActiveTab, tabs } = useTabContext();
+  const { setActiveTab, tabs, updateTab, activeTab } = useTabContext();
+  const [isEditing, setIsEditing] = useState(false);
 
   const style = {
     position: 'absolute' as const,
@@ -46,6 +50,113 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
           break;
       }
     });
+  };
+
+  const handleHeaderChange = (index: number, value: string) => {
+    const newHeaders = [...(config.properties.headers || [])];
+    newHeaders[index] = value;
+    updateTableProperty('headers', newHeaders);
+  };
+
+  const handleCellChange = (rowIndex: number, cellIndex: number, value: string) => {
+    const newRows = [...(config.properties.rows || [[]])];
+    newRows[rowIndex][cellIndex] = value;
+    updateTableProperty('rows', newRows);
+  };
+
+  const addColumn = () => {
+    const newHeaders = [...(config.properties.headers || []), `Başlık ${(config.properties.headers?.length || 0) + 1}`];
+    const newRows = (config.properties.rows || [[]]).map(row => [...row, '']);
+    updateTableProperty('headers', newHeaders);
+    updateTableProperty('rows', newRows);
+  };
+
+  const addRow = () => {
+    const newRows = [...(config.properties.rows || [[]]), new Array(config.properties.headers?.length || 0).fill('')];
+    updateTableProperty('rows', newRows);
+  };
+
+  const removeRow = (rowIndex: number) => {
+    const newRows = (config.properties.rows || [[]]).filter((_, index) => index !== rowIndex);
+    updateTableProperty('rows', newRows);
+  };
+
+  const updateTableProperty = (key: string, value: any) => {
+    const updatedConfig = {
+      ...config,
+      properties: {
+        ...config.properties,
+        [key]: value
+      }
+    };
+    // Tab context'teki updateTab fonksiyonunu çağır
+  };
+
+  const saveChanges = () => {
+    setIsEditing(false);
+    updateTab(config.id, {
+      layout: [config]
+    });
+  };
+
+  const handleAddRow = async () => {
+    if (config.type === "table" && activeTab) {
+      try {
+        const newRow = Array(config.properties.headers?.length || 0).fill("");
+        const updatedConfig = {
+          ...config,
+          properties: {
+            ...config.properties,
+            rows: [...(config.properties.rows || []), newRow]
+          }
+        };
+
+        // Layout içindeki ilgili tabloyu güncelle
+        const updatedLayout = activeTab.layout?.map(item =>
+          item.id === config.id ? updatedConfig : item
+        );
+
+        // Tab'ı güncelle
+        await updateTab(activeTab.id, {
+          ...activeTab,
+          layout: updatedLayout
+        });
+
+        toast.success("Yeni satır eklendi");
+      } catch (error) {
+        toast.error("Satır eklenirken bir hata oluştu");
+      }
+    }
+  };
+
+  const handleDeleteRow = async (rowIndex: number) => {
+    if (config.type === "table" && activeTab) {
+      try {
+        const updatedRows = [...(config.properties.rows || [])];
+        updatedRows.splice(rowIndex, 1);
+
+        const updatedConfig = {
+          ...config,
+          properties: {
+            ...config.properties,
+            rows: updatedRows
+          }
+        };
+
+        const updatedLayout = activeTab.layout?.map(item =>
+          item.id === config.id ? updatedConfig : item
+        );
+
+        await updateTab(activeTab.id, {
+          ...activeTab,
+          layout: updatedLayout
+        });
+
+        toast.success("Satır silindi");
+      } catch (error) {
+        toast.error("Satır silinirken bir hata oluştu");
+      }
+    }
   };
 
   const renderContent = () => {
@@ -98,35 +209,80 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
         );
       case "table":
         return (
-          <div className="w-full h-full border rounded-md bg-background overflow-hidden">
+          <div style={style} className="border rounded-md bg-card">
             <div className="p-2 border-b bg-muted/30">
-              <span className="text-sm font-medium">
-                {config.properties.label || "Tablo"}
-              </span>
+              <span className="text-sm font-medium">{config.properties.label}</span>
             </div>
             <div className="p-2 overflow-auto">
               <table className="w-full">
                 <thead>
                   <tr>
-                    {(config.properties.headers || []).map((header: string, index: number) => (
+                    {config.properties.headers?.map((header, index) => (
                       <th key={index} className="p-2 text-sm font-medium text-left border-b">
                         {header}
                       </th>
                     ))}
+                    <th className="w-16"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {(config.properties.rows || [[]]).map((row: string[], rowIndex: number) => (
+                  {config.properties.rows?.map((row, rowIndex) => (
                     <tr key={rowIndex}>
-                      {row.map((cell: string, cellIndex: number) => (
+                      {row.map((cell, cellIndex) => (
                         <td key={cellIndex} className="p-2 text-sm border-b">
-                          {cell || ""}
+                          <input
+                            type="text"
+                            value={cell}
+                            onChange={(e) => {
+                              const updatedRows = [...(config.properties.rows || [])];
+                              updatedRows[rowIndex][cellIndex] = e.target.value;
+                              
+                              const updatedConfig = {
+                                ...config,
+                                properties: {
+                                  ...config.properties,
+                                  rows: updatedRows
+                                }
+                              };
+
+                              const updatedLayout = activeTab?.layout?.map(item =>
+                                item.id === config.id ? updatedConfig : item
+                              );
+
+                              if (activeTab) {
+                                updateTab(activeTab.id, {
+                                  ...activeTab,
+                                  layout: updatedLayout
+                                });
+                              }
+                            }}
+                            className="w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-ring rounded px-1"
+                          />
                         </td>
                       ))}
+                      <td className="p-2 w-16">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteRow(rowIndex)}
+                          className="h-6 w-6 p-0"
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddRow}
+                className="w-full mt-2"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Yeni Satır
+              </Button>
             </div>
           </div>
         );
