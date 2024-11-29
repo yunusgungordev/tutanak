@@ -1,3 +1,5 @@
+import { LayoutConfig } from "./tab"
+
 export interface ComponentProperties {
   label?: string
   placeholder?: string
@@ -39,17 +41,24 @@ export interface ComponentProperties {
     fontWeight?: string
   }
   events?: {
-    onChange?: (value: any) => void
-    onFocus?: () => void
-    onBlur?: () => void
-    onClick?: () => void
-  }
+    id: string;
+    type: 'click' | 'change' | 'submit';
+    action: 'openDialog' | 'showMessage' | 'navigateTab' | 'executeQuery';
+    target?: string;
+    params?: Record<string, any>;
+  }[];
   dependencies?: {
     field: string
     condition: 'equals' | 'notEquals' | 'contains' | 'greaterThan' | 'lessThan'
     value: any
     action: 'show' | 'hide' | 'enable' | 'disable'
   }[]
+  tasks?: {
+    id: string;
+    text: string;
+    completed: boolean;
+    createdAt: string;
+  }[];
 }
 
 export interface DraggableComponentType {
@@ -58,4 +67,15 @@ export interface DraggableComponentType {
   label: string
   icon: React.ReactNode
   defaultProps: ComponentProperties
+}
+
+export interface DraggableComponentProps {
+  item: LayoutConfig
+  layout: LayoutConfig[]
+  setLayout: (layout: LayoutConfig[]) => void
+  selectedComponent: string | null
+  onSelect: (id: string) => void
+  renderComponentPreview: (item: LayoutConfig) => React.ReactNode
+  gridWidth: number
+  gridHeight: number
 } 

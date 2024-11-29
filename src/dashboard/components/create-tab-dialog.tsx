@@ -19,6 +19,12 @@ import { Label } from "@/components/ui/label"
 import { X } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import interact from 'interactjs'
+import { useInteractable } from "@/hooks/use-interactable"
+import { DraggableComponent } from "./draggable-component"
+import { ComponentProperties } from "@/types/component"
+import { nanoid } from "nanoid"
+import { Canvas } from "./canvas"
 
 // Sabit değerler tanımlayalım
 const GRID_PADDING = 20
@@ -41,7 +47,7 @@ const getSnapPosition = (value: number): number => {
 }
 
 // Bileşen pozisyonlama ve boyutlandırma için yardımcı fonksiyonlar
-const handleDragStop = (e: any, d: any, item: LayoutConfig, layout: LayoutConfig[], setLayout: (layout: LayoutConfig[]) => void) => {
+const handleDragStop = ({ x, y }: { x: number, y: number }, item: LayoutConfig, layout: LayoutConfig[], setLayout: (layout: LayoutConfig[]) => void) => {
   const newLayout = [...layout]
   const index = newLayout.findIndex(l => l.id === item.id)
   if (index !== -1) {
@@ -49,15 +55,15 @@ const handleDragStop = (e: any, d: any, item: LayoutConfig, layout: LayoutConfig
       ...newLayout[index],
       properties: {
         ...newLayout[index].properties,
-        x: getSnapPosition(d.x),
-        y: getSnapPosition(d.y)
+        x: getSnapPosition(x),
+        y: getSnapPosition(y)
       }
     }
   }
   setLayout(newLayout)
 }
 
-const handleResizeStop = (e: any, direction: any, ref: any, delta: any, position: any, item: LayoutConfig, layout: LayoutConfig[], setLayout: (layout: LayoutConfig[]) => void) => {
+const handleResizeStop = ({ width, height, x, y }: { width: number, height: number, x: number, y: number }, item: LayoutConfig, layout: LayoutConfig[], setLayout: (layout: LayoutConfig[]) => void) => {
   const newLayout = [...layout]
   const index = newLayout.findIndex(l => l.id === item.id)
   if (index !== -1) {
@@ -65,10 +71,10 @@ const handleResizeStop = (e: any, direction: any, ref: any, delta: any, position
       ...newLayout[index],
       properties: {
         ...newLayout[index].properties,
-        width: getSnapPosition(parseInt(ref.style.width)),
-        height: getSnapPosition(parseInt(ref.style.height)),
-        x: getSnapPosition(position.x),
-        y: getSnapPosition(position.y)
+        width: getSnapPosition(width),
+        height: getSnapPosition(height),
+        x: getSnapPosition(x),
+        y: getSnapPosition(y)
       }
     }
   }
@@ -229,6 +235,38 @@ function PropertiesPanel({
               ...item.properties, 
               [key]: value 
             } 
+          }
+        : item
+    ))
+  }
+
+  const addEvent = (event: NonNullable<ComponentProperties['events']>[number]) => {
+    const newLayout = [...layout];
+    const index = newLayout.findIndex(l => l.id === selectedComponent);
+    
+    if (index !== -1) {
+      newLayout[index] = {
+        ...newLayout[index],
+        properties: {
+          ...newLayout[index].properties,
+          events: [...(newLayout[index].properties.events || []), event]
+        }
+      };
+      setLayout(newLayout);
+    }
+  };
+
+  const updateEvent = (eventId: string, updates: Partial<NonNullable<ComponentProperties['events']>[number]>) => {
+    setLayout(layout.map(item => 
+      item.id === selectedComponent 
+        ? {
+            ...item,
+            properties: {
+              ...item.properties,
+              events: item.properties.events?.map(event =>
+                event.id === eventId ? { ...event, ...updates } : event
+              )
+            }
           }
         : item
     ))
@@ -445,9 +483,62 @@ function PropertiesPanel({
           </div>
         </div>
       )}
+
+      <div className="space-y-2">
+        <Label>Olaylar</Label>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => {
+            addEvent({
+              id: nanoid(),
+              type: 'click',
+              action: 'showMessage',
+              params: { message: 'Yeni mesaj' }
+            });
+          }}
+        >
+          Olay Ekle
+        </Button>
+        
+        {component?.properties.events?.map((event) => (
+          <div key={event.id} className="flex items-center gap-2 p-2 border rounded-md">
+            <Select
+              value={event.type}
+              onValueChange={(value: "click" | "change" | "submit") => updateEvent(event.id, { type: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="click">Tıklama</SelectItem>
+                <SelectItem value="change">Değişim</SelectItem>
+                <SelectItem value="submit">Gönder</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select
+              value={event.action}
+              onValueChange={(value: EventAction) => updateEvent(event.id, { action: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="showMessage">Mesaj Göster</SelectItem>
+                <SelectItem value="navigateTab">Tab'a Git</SelectItem>
+                <SelectItem value="openDialog">Dialog Aç</SelectItem>
+                <SelectItem value="executeQuery">Sorgu Çalıştır</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
+
+type EventAction = 'showMessage' | 'navigateTab' | 'openDialog' | 'executeQuery';
 
 export function CreateTabDialog({ 
   open, 
@@ -537,53 +628,33 @@ export function CreateTabDialog({
   }
 
   const handleSave = async () => {
-    if (!label) {
-      toast.error("Tab başlığı gereklidir");
-      return;
-    }
-
-    if (layout.length === 0) {
-      toast.error("En az bir bileşen eklemelisiniz");
-      return;
-    }
-
     try {
-      if (editMode && tabToEdit) {
-        // Düzenleme modu - mevcut tabı güncelle
-        await updateTab(tabToEdit.id, {
-          label,
-          layout,
-          fields
-        });
-        onOpenChange(false);
-        toast.success("Tab başarıyla güncellendi");
-      } else {
-        // Yeni tab oluştur
-        const tabId = crypto.randomUUID();
-        const config = {
-          id: tabId,
-          label,
-          type: "dynamic",
-          layout,
-          database: {
-            table_name: label.toLowerCase().replace(/\s+/g, '_'),
-            fields
-          }
-        };
-
-        const result = await saveDynamicTab(config);
-        
-        if (result) {
-          onOpenChange(false);
-          toast.success("Tab başarıyla oluşturuldu");
-        }
+      if (!label.trim()) {
+        toast.error("Tab başlığı gereklidir");
+        return;
       }
 
-      // Form alanlarını temizle
-      setLayout([]);
-      setFields([]);
-      setLabel("");
-      setSelectedComponent(null);
+      const tabData = {
+        id: crypto.randomUUID(),
+        label,
+        type: "dynamic" as const,
+        layout,
+        fields,
+        database: {
+          table_name: label.toLowerCase().replace(/\s+/g, '_'),
+          fields: fields
+        }
+      };
+
+      if (editMode && tabToEdit) {
+        await updateTab(tabToEdit.id, tabData);
+        toast.success("Tab güncellendi");
+      } else {
+        await saveDynamicTab(tabData);
+        toast.success("Tab oluşturuldu");
+      }
+
+      onOpenChange(false);
     } catch (error) {
       const errorMessage = editMode ? "Tab güncellenirken bir hata oluştu" : "Tab oluşturulurken bir hata oluştu";
       toast.error(errorMessage);
@@ -635,21 +706,15 @@ export function CreateTabDialog({
 
   const handleUpdateLayout = (newLayout: LayoutConfig[]) => {
     setLayout(newLayout);
-    if (selectedComponent) {
-      const tab = tabs.find((t: TabContent) => t.id === selectedComponent);
-      if (tab?.type === "dynamic") {
-        updateTab(tab.id, { layout: newLayout });
-      }
+    if (selectedComponent && tabToEdit) {
+      updateTab(tabToEdit.id, { layout: newLayout });
     }
   }
 
   const handleUpdateFields = (newFields: Field[]) => {
     setFields(newFields);
-    if (selectedComponent) {
-      const tab = tabs.find((t: TabContent) => t.id === selectedComponent);
-      if (tab?.type === "dynamic") {
-        updateTab(tab.id, { fields: newFields });
-      }
+    if (selectedComponent && tabToEdit) {
+      updateTab(tabToEdit.id, { fields: newFields });
     }
   }
 
@@ -696,19 +761,19 @@ export function CreateTabDialog({
                   <LayoutGrid className="w-4 h-4" />
                   <span className="font-medium">Bileşenler</span>
                 </div>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                <div className="h-6 w-6 p-0">
                   {isComponentsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                </Button>
+                </div>
               </CollapsibleTrigger>
               <CollapsibleContent className="flex-1 min-h-0 overflow-hidden">
                 <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
                   <div className="p-4 space-y-2">
                     <div className="grid grid-cols-1 gap-2">
                       {COMPONENTS.map((component) => (
-                        <button
+                        <div
                           key={component.id}
                           onClick={() => handleAddComponent(component)}
-                          className="flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
+                          className="flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
                         >
                           <div className="w-8 h-8 flex items-center justify-center rounded-md bg-muted">
                             {component.icon}
@@ -719,7 +784,7 @@ export function CreateTabDialog({
                               {getComponentDescription(component.type)}
                             </div>
                           </div>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -790,51 +855,14 @@ export function CreateTabDialog({
             </div>
 
             {/* Sonsuz canvas alanı */}
-            <div 
-              className="relative w-[3000px] h-[3000px] bg-muted/5 rounded-lg"
-              style={gridStyle}
-              ref={gridRef}
-              onClick={handleCanvasClick}
-            >
-              {/* Görünür alan göstergesi */}
-              <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-                <div className="w-full h-full border border-dashed border-muted-foreground/20" />
-              </div>
-
-              {/* Bileşenler */}
-              {layout.map((item) => (
-                <Rnd
-                  key={item.id}
-                  bounds="parent"
-                  position={{
-                    x: item.properties.x,
-                    y: item.properties.y
-                  }}
-                  size={{
-                    width: item.properties.width,
-                    height: item.properties.height
-                  }}
-                  onDragStop={(e, d) => {
-                    handleDragStop(e, d, item, layout, setLayout)
-                  }}
-                  onResizeStop={(e, direction, ref, delta, position) => {
-                    handleResizeStop(e, direction, ref, delta, position, item, layout, setLayout)
-                  }}
-                  onClick={(e: React.MouseEvent) => {
-                    handleComponentSelect(item.id)
-                  }}
-                  className={cn(
-                    "hover:ring-2 ring-primary/50 rounded-md transition-all duration-200 shadow-[0_4px_12px_rgba(0,0,0,0.15)] bg-background group",
-                    selectedComponent === item.id && "ring-2 ring-primary shadow-[0_8px_16px_rgba(0,0,0,0.2)]"
-                  )}
-                >
-                  <div className="drag-handle w-full h-6 bg-muted/30 rounded-t-md cursor-move flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-8 h-1 bg-muted-foreground/30 rounded-full" />
-                  </div>
-                  {renderComponentPreview(item)}
-                </Rnd>
-              ))}
-            </div>
+            <Canvas
+              layout={layout}
+              setLayout={setLayout}
+              selectedComponent={selectedComponent}
+              onSelect={handleComponentSelect}
+              renderComponentPreview={renderComponentPreview}
+              isDialog={true}
+            />
           </div>
 
           {/* Sağ Panel - Özellikler */}
@@ -882,8 +910,8 @@ function renderComponentPreview(item: LayoutConfig) {
     case "select":
       return (
         <select className="w-full px-2 py-1 border rounded bg-muted/50" disabled>
-          {item.properties.options?.map((option, i) => (
-            <option key={i}>{option}</option>
+          {item.properties.options?.map((option, index) => (
+            <option key={index}>{option}</option>
           ))}
         </select>
       )
