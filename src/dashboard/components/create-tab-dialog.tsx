@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DraggableComponentType } from "@/types/component"
 import { LayoutConfig, Field, TabContent } from "@/types/tab"
-import { FormInput as InputIcon, Type, Table, ListTodo, Square } from "lucide-react"
+import { FormInput as InputIcon, Type, Table, ListTodo, Square, Plus } from "lucide-react"
 import { useTabContext } from "@/contexts/tab-context"
 import { toast } from "react-hot-toast"
 import { Rnd } from "react-rnd"
@@ -541,6 +541,65 @@ function PropertiesPanel({
 
 type EventAction = 'showMessage' | 'navigateTab' | 'openDialog' | 'executeQuery';
 
+const COMPONENT_CATEGORIES = [
+  {
+    title: "Temel Bileşenler",
+    components: [
+      {
+        id: "input",
+        type: "input",
+        label: "Metin Kutusu",
+        description: "Tek satırlık metin girişi için",
+        icon: <InputIcon className="w-4 h-4" />,
+        defaultProps: {
+          label: "Yeni Metin Kutusu",
+          placeholder: "Metin giriniz",
+          width: 200,
+          height: 40,
+          x: 0,
+          y: 0
+        }
+      },
+      {
+        id: "textarea",
+        type: "textarea",
+        label: "Çok Satırlı Metin",
+        description: "Uzun metinler için",
+        icon: <Type className="w-4 h-4" />,
+        defaultProps: {
+          label: "Yeni Çok Satırlı Metin",
+          placeholder: "Metin giriniz",
+          width: 300,
+          height: 100,
+          x: 0,
+          y: 0
+        }
+      }
+    ]
+  },
+  {
+    title: "Veri Bileşenleri",
+    components: [
+      {
+        id: "table",
+        type: "table",
+        label: "Tablo",
+        description: "Verileri düzenli göstermek için",
+        icon: <Table className="w-4 h-4" />,
+        defaultProps: {
+          label: "Yeni Tablo",
+          width: 400,
+          height: 200,
+          x: 0,
+          y: 0,
+          headers: ["Başlık 1", "Başlık 2", "Başlık 3"],
+          rows: [["", "", ""], ["", "", ""]]
+        }
+      }
+    ]
+  }
+];
+
 export function CreateTabDialog({ 
   open, 
   onOpenChange,
@@ -718,12 +777,18 @@ export function CreateTabDialog({
       <DialogContent className="max-w-[90vw] max-h-[90vh] h-[800px] flex flex-col overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle>{editMode ? "Tab Düzenle" : "Yeni Tab Oluştur"}</DialogTitle>
-          <Input
-            placeholder="Tab Başlığı"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            className="mt-4"
-          />
+          <div className="space-y-2 mt-4">
+            <Label htmlFor="tabTitle">Tab Başlığı</Label>
+            <Input
+              id="tabTitle"
+              placeholder="Örn: Müşteri Bilgileri"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Bu başlık tab menüsünde görünecektir
+            </p>
+          </div>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 flex">
@@ -762,26 +827,34 @@ export function CreateTabDialog({
               </CollapsibleTrigger>
               <CollapsibleContent className="flex-1 min-h-0 overflow-hidden">
                 <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
-                  <div className="p-4 space-y-2">
-                    <div className="grid grid-cols-1 gap-2">
-                      {COMPONENTS.map((component) => (
-                        <div
-                          key={component.id}
-                          onClick={() => handleAddComponent(component)}
-                          className="flex items-center gap-2 p-2 text-sm rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                        >
-                          <div className="w-8 h-8 flex items-center justify-center rounded-md bg-muted">
-                            {component.icon}
-                          </div>
-                          <div className="flex-1 text-left">
-                            <div className="font-medium">{component.label}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {getComponentDescription(component.type)}
+                  <div className="p-4 space-y-4">
+                    {COMPONENT_CATEGORIES.map((category) => (
+                      <div key={category.title} className="space-y-2">
+                        <h3 className="text-sm font-medium text-muted-foreground">{category.title}</h3>
+                        <div className="grid grid-cols-1 gap-2">
+                          {category.components.map((component) => (
+                            <div
+                              key={component.id}
+                              onClick={() => handleAddComponent(component)}
+                              className="group relative flex items-center gap-2 p-3 rounded-lg border border-border/50 hover:border-primary/50 hover:bg-accent transition-colors cursor-pointer"
+                            >
+                              <div className="w-10 h-10 flex items-center justify-center rounded-md bg-muted">
+                                {component.icon}
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium">{component.label}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {component.description}
+                                </div>
+                              </div>
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Plus className="w-4 h-4" />
+                              </div>
                             </div>
-                          </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </CollapsibleContent>
@@ -790,66 +863,14 @@ export function CreateTabDialog({
 
           {/* Orta Panel - Canvas */}
           <div className="flex-1 overflow-auto p-6">
-            {/* Araç çubuğu */}
-            <div className="flex items-center gap-2 mb-4 p-2 bg-muted/30 rounded-md sticky top-0 z-10">
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleAlignComponent('left')}
-                  disabled={!selectedComponent}
-                >
-                  <AlignStartHorizontal className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleAlignComponent('center')}
-                  disabled={!selectedComponent}
-                >
-                  <AlignHorizontalJustifyCenter className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleAlignComponent('right')}
-                  disabled={!selectedComponent}
-                >
-                  <AlignEndHorizontal className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <Separator orientation="vertical" className="h-6" />
-              
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleAlignComponent('top')}
-                  disabled={!selectedComponent}
-                >
-                  <AlignStartVertical className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleAlignComponent('middle')}
-                  disabled={!selectedComponent}
-                >
-                  <AlignVerticalJustifyCenter className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleAlignComponent('bottom')}
-                  disabled={!selectedComponent}
-                >
-                  <AlignEndVertical className="h-4 w-4" />
-                </Button>
-              </div>
+            <div className="bg-muted/30 rounded-lg p-4 mb-4">
+              <h3 className="text-sm font-medium mb-2">İpuçları</h3>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Bileşenleri sürükleyerek yerleştirebilirsiniz</li>
+                <li>• Izgara çizgilerine otomatik yapışır</li>
+                <li>• Bileşenleri seçerek özelliklerini düzenleyebilirsiniz</li>
+              </ul>
             </div>
-
-            {/* Sonsuz canvas alanı */}
             <Canvas
               layout={layout}
               setLayout={setLayout}
