@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DraggableComponentType } from "@/types/component"
 import { LayoutConfig, Field, TabContent } from "@/types/tab"
-import { FormInput as InputIcon, Type, Table, ListTodo, Square, Plus } from "lucide-react"
+import { FormInput as InputIcon, Type, Table, ListTodo, Square, Plus, File } from "lucide-react"
 import { useTabContext } from "@/contexts/tab-context"
 import { toast } from "react-hot-toast"
 import { Rnd } from "react-rnd"
@@ -25,6 +25,7 @@ import { DraggableComponent } from "./draggable-component"
 import { ComponentProperties } from "@/types/component"
 import { nanoid } from "nanoid"
 import { Canvas } from "./canvas"
+import { Textarea } from "@/components/ui/textarea"
 
 // Sabit değerler tanımlayalım
 const GRID_PADDING = 20
@@ -176,6 +177,29 @@ const COMPONENTS: DraggableComponentType[] = [
       x: 0,
       y: 0,
       pageSize: 5
+    }
+  },
+  {
+    id: "a4",
+    type: "a4",
+    label: "A4 Belgesi",
+    icon: <File className="w-4 h-4" />,
+    defaultProps: {
+      label: "Yeni A4 Belgesi",
+      width: 595, // A4 genişliği (72 dpi)
+      height: 842, // A4 yüksekliği (72 dpi)
+      x: 0,
+      y: 0,
+      content: "",
+      fontSize: 12,
+      fontFamily: "Arial",
+      lineHeight: 1.5,
+      margins: {
+        top: 40,
+        right: 40,
+        bottom: 40,
+        left: 40
+      }
     }
   }
 ]
@@ -370,6 +394,18 @@ function PropertiesPanel({
             value={component.properties.label || ''}
             onChange={e => updateProperty('label', e.target.value)}
             placeholder="Onay kutusu metni giriniz"
+          />
+        </div>
+      )}
+
+      {component.type === 'a4' && (
+        <div className="space-y-2">
+          <Label>İçerik</Label>
+          <Textarea
+            value={component.properties.content || ''}
+            onChange={e => updateProperty('content', e.target.value)}
+            placeholder="İçerik giriniz"
+            className="min-h-[200px]"
           />
         </div>
       )}
@@ -597,8 +633,37 @@ const COMPONENT_CATEGORIES = [
         }
       }
     ]
+  },
+  {
+    title: "Belge Bileşenleri",
+    components: [
+      {
+        id: "a4",
+        type: "a4",
+        label: "A4 Belgesi",
+        description: "Standart A4 boyutunda belge",
+        icon: <File className="w-4 h-4" />,
+        defaultProps: {
+          label: "Yeni A4 Belgesi",
+          width: 595,
+          height: 842,
+          x: 0,
+          y: 0,
+          content: "",
+          fontSize: 12,
+          fontFamily: "Arial",
+          lineHeight: 1.5,
+          margins: {
+            top: 40,
+            right: 40,
+            bottom: 40,
+            left: 40
+          }
+        }
+      }
+    ]
   }
-];
+]
 
 export function CreateTabDialog({ 
   open, 
@@ -985,6 +1050,15 @@ function renderComponentPreview(item: LayoutConfig) {
           </div>
         </div>
       )
+    case "a4":
+      return (
+        <div className="w-full h-full bg-white border rounded-md p-4 overflow-auto">
+          <div className="text-sm font-medium mb-2">{item.properties.label}</div>
+          <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+            {item.properties.content || "İçerik bulunmuyor"}
+          </div>
+        </div>
+      );
     default:
       return null
   }

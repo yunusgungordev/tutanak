@@ -11,12 +11,13 @@ interface DraggableComponentProps {
   selectedComponent: string | null
   onSelect: (id: string) => void
   renderComponentPreview: (item: LayoutConfig) => React.ReactNode
+  onDelete: (id: string) => void
+  onContentUpdate?: (updatedConfig: LayoutConfig) => void
   gridBounds: {
     width: number
     height: number
     padding: number
   }
-  onDelete: (id: string) => void
 }
 
 const GRID_SNAP = 10
@@ -68,8 +69,9 @@ export function DraggableComponent({
   selectedComponent,
   onSelect,
   renderComponentPreview,
-  gridBounds,
-  onDelete
+  onDelete,
+  onContentUpdate,
+  gridBounds
 }: DraggableComponentProps) {
   const ref = useInteractable(
     item.id,
@@ -95,6 +97,12 @@ export function DraggableComponent({
       setLayout(newLayout)
     }
   }
+
+  const handleUpdate = (updatedConfig: LayoutConfig) => {
+    if (onContentUpdate) {
+      onContentUpdate(updatedConfig);
+    }
+  };
 
   return (
     <div
@@ -131,7 +139,10 @@ export function DraggableComponent({
           <X className="h-3 w-3" />
         </button>
       </div>
-      {renderComponentPreview(item)}
+      {renderComponentPreview({
+        ...item,
+        onContentUpdate: handleUpdate
+      })}
     </div>
   )
 }

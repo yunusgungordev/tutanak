@@ -29,9 +29,10 @@ export interface DynamicTabConfig {
 }
 
 export interface LayoutConfig {
-  id: string;
-  type: string;
-  properties: ComponentProperties;
+  id: string
+  type: string
+  properties: ComponentProperties
+  onContentUpdate?: (updatedConfig: LayoutConfig) => void
 }
 
 export interface Field {

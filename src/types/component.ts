@@ -1,6 +1,16 @@
 import { LayoutConfig } from "./tab"
 
 export interface ComponentProperties {
+  margins?: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  };
+  fontSize?: number;
+  fontFamily?: string;
+  lineHeight?: string | number;
+  content?: string;
   label?: string
   placeholder?: string
   width: number

@@ -231,45 +231,36 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
       const tabToUpdate = tabs.find(tab => tab.id === tabId);
       
       if (tabToUpdate?.type === "dynamic") {
-        // Layout içindeki tablo verilerini kontrol et ve düzenle
-        const updatedLayout = (config.layout || []).map(item => {
-          if (item.type === "table") {
-            return {
-              ...item,
-              properties: {
-                ...item.properties,
-                rows: item.properties.rows || [[]],
-                headers: item.properties.headers || []
-              }
-            }
+        const updatedLayout = config.layout?.map(item => ({
+          ...item,
+          properties: {
+            ...item.properties,
+            content: item.properties.content
           }
-          return item;
-        });
+        })) || [];
 
         const updateData = {
-          ...config,
-          layout: updatedLayout,
           id: tabId,
+          label: config.label || tabToUpdate.label,
           type: "dynamic",
+          layout: updatedLayout,
+          database: tabToUpdate.database || { table_name: '', fields: [] },
           created_at: tabToUpdate.created_at || new Date().toISOString()
         };
 
-        // Veritabanını güncelle
         const result = await invoke('update_tab', { tabData: updateData });
         
         if (result) {
-          // State'i güncelle
           setTabs(prev => prev.map(tab => 
             tab.id === tabId 
               ? { 
                   ...tab, 
                   ...updateData,
-                  component: DynamicTabRenderer
+                  component: DynamicTabRenderer,
                 }
               : tab
           ));
           
-          toast.success("Tab başarıyla güncellendi");
           return true;
         }
       }
@@ -279,7 +270,7 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
       toast.error("Tab güncellenirken bir hata oluştu");
       return false;
     }
-  }
+  };
 
   const updateLayout = (tabId: string, newLayout: LayoutConfig[]) => {
     setTabs(prev => prev.map(tab => 

@@ -71,7 +71,8 @@ struct Properties {
     options: Option<Vec<String>>,
     headers: Option<Vec<String>>,
     rows: Option<Vec<Vec<String>>>,
-    is_visible: Option<bool>
+    is_visible: Option<bool>,
+    content: Option<String>
 }
 
 #[derive(Debug, Serialize, Deserialize)]

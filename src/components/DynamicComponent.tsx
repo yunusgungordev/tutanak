@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LayoutConfig, Field } from '@/types/tab';
 import { useTabContext } from "@/contexts/tab-context";
 import { toast } from "react-hot-toast";
@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button"
 import { Pencil, Plus, X, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { Editor } from './Editor';
 
 interface DynamicComponentProps {
   config: LayoutConfig;
-  fields: Field[];
+  fields?: Field[];
+  onContentUpdate?: (updatedConfig: LayoutConfig) => void;
 }
 
-export function DynamicComponent({ config, fields }: DynamicComponentProps) {
+export function DynamicComponent({ config, fields, onContentUpdate }: DynamicComponentProps) {
   const { setActiveTab, tabs, updateTab, activeTab, updateLayout } = useTabContext();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -108,7 +110,9 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
     updateTableProperty('rows', newRows);
   };
 
-  const updateTableProperty = (key: string, value: any) => {
+  const updateTableProperty = async (key: string, value: any) => {
+    if (!activeTab) return;
+
     const updatedConfig = {
       ...config,
       properties: {
@@ -116,7 +120,25 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
         [key]: value
       }
     };
-    // Tab context'teki updateTab fonksiyonunu çağır
+
+    try {
+      const updatedLayout = activeTab.layout?.map(item =>
+        item.id === config.id ? updatedConfig : item
+      ) || [];
+
+      await updateTab(activeTab.id, {
+        ...activeTab,
+        layout: updatedLayout
+      });
+
+      if (onContentUpdate) {
+        onContentUpdate(updatedConfig);
+      }
+      toast.success("İçerik güncellendi");
+    } catch (error) {
+      console.error("İçerik güncelleme hatası:", error);
+      toast.error("İçerik güncellenirken bir hata oluştu");
+    }
   };
 
   const saveChanges = () => {
@@ -186,6 +208,30 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
     }
   };
 
+  const handleKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    rowIndex: number,
+    cellIndex: number
+  ) => {
+    if (event.key === 'Tab' && !event.shiftKey) {
+      event.preventDefault();
+      
+      const isLastCell = cellIndex === config.properties.headers!.length - 1;
+      const isLastRow = rowIndex === config.properties.rows!.length - 1;
+
+      if (isLastCell && isLastRow) {
+        handleAddRow();
+      }
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const isLastRow = rowIndex === config.properties.rows!.length - 1;
+      
+      if (isLastRow) {
+        handleAddRow();
+      }
+    }
+  };
+
   // Tablo için stil tanımlamaları
   const tableStyles = {
     table: "min-w-full border-collapse bg-white",
@@ -195,6 +241,37 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
     td: "px-4 py-2 text-sm text-gray-700 border-b border-gray-200",
     input: "w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-ring rounded px-1",
     rowNumber: "w-10 px-4 py-2 text-sm text-gray-500 border-b border-gray-200 bg-gray-50 text-center font-mono"
+  };
+
+  const handleA4ContentChange = async (newContent: string) => {
+    if (!activeTab) return;
+
+    try {
+      const updatedConfig = {
+        ...config,
+        properties: {
+          ...config.properties,
+          content: newContent
+        }
+      };
+
+      const updatedLayout = activeTab.layout?.map(item =>
+        item.id === config.id ? updatedConfig : item
+      ) || [];
+
+      await updateTab(activeTab.id, {
+        ...activeTab,
+        layout: updatedLayout
+      });
+
+      if (onContentUpdate) {
+        onContentUpdate(updatedConfig);
+      }
+      toast.success("İçerik kaydedildi");
+    } catch (error) {
+      console.error("İçerik kaydetme hatası:", error);
+      toast.error("İçerik kaydedilirken bir hata oluştu");
+    }
   };
 
   const renderContent = () => {
@@ -289,29 +366,8 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
                           <input
                             type="text"
                             value={cell}
-                            onChange={(e) => {
-                              const updatedRows = [...(config.properties.rows || [])];
-                              updatedRows[rowIndex][cellIndex] = e.target.value;
-                              
-                              const updatedConfig = {
-                                ...config,
-                                properties: {
-                                  ...config.properties,
-                                  rows: updatedRows
-                                }
-                              };
-
-                              if (activeTab) {
-                                const updatedLayout = activeTab.layout?.map(item =>
-                                  item.id === config.id ? updatedConfig : item
-                                );
-
-                                updateTab(activeTab.id, {
-                                  ...activeTab,
-                                  layout: updatedLayout
-                                });
-                              }
-                            }}
+                            onChange={(e) => handleCellChange(rowIndex, cellIndex, e.target.value)}
+                            onKeyDown={(e) => handleKeyDown(e, rowIndex, cellIndex)}
                             className={tableStyles.input}
                           />
                         </td>
@@ -333,6 +389,90 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
             </div>
           </div>
         );
+      case "a4": {
+        const [isEditing, setIsEditing] = useState(false);
+        const [content, setContent] = useState(config.properties.content || "");
+
+        const handleSave = async () => {
+          try {
+            if (!activeTab?.layout) return;
+            
+            const updatedConfig = {
+              ...config,
+              properties: {
+                ...config.properties,
+                content: content
+              }
+            };
+
+            const updatedLayout = activeTab.layout.map(item =>
+              item.id === config.id ? updatedConfig : item
+            );
+
+            await updateTab(activeTab.id, {
+              ...activeTab,
+              layout: updatedLayout
+            });
+
+            if (onContentUpdate) {
+              onContentUpdate(updatedConfig);
+            }
+            setIsEditing(false);
+            toast.success("İçerik kaydedildi");
+          } catch (error) {
+            console.error('İçerik kaydetme hatası:', error);
+            toast.error("Kayıt sırasında bir hata oluştu");
+          }
+        };
+
+        useEffect(() => {
+          setContent(config.properties.content || "");
+        }, [config.properties.content]);
+
+        return (
+          <div className="border rounded-md bg-card shadow-sm">
+            <div className="p-3 border-b bg-muted/30 flex justify-between items-center">
+              <span className="text-sm font-medium">{config.properties.label}</span>
+              <div className="flex gap-2">
+                {isEditing ? (
+                  <>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      setIsEditing(false);
+                      setContent(config.properties.content || "");
+                    }}>
+                      İptal
+                    </Button>
+                    <Button variant="default" size="sm" onClick={handleSave}>
+                      Kaydet
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                    Düzenle
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="p-4">
+              {isEditing ? (
+                <textarea
+                  value={content}
+                  onChange={(e) => {
+                    setContent(e.target.value);
+                    handleA4ContentChange(e.target.value);
+                  }}
+                  className="w-full min-h-[200px] p-2 border rounded-md"
+                  placeholder="İçerik giriniz..."
+                />
+              ) : (
+                <div className="whitespace-pre-wrap">
+                  {content || "İçerik bulunmuyor"}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
       default:
         return null;
     }

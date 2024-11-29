@@ -10,6 +10,7 @@ interface CanvasProps {
   onSelect: (id: string) => void
   renderComponentPreview: (item: LayoutConfig) => React.ReactNode
   isDialog?: boolean
+  onContentUpdate?: (updatedConfig: LayoutConfig) => void
 }
 
 const GRID_PADDING = 20
@@ -37,7 +38,8 @@ export function Canvas({
   selectedComponent, 
   onSelect, 
   renderComponentPreview,
-  isDialog = false 
+  isDialog = false,
+  onContentUpdate 
 }: CanvasProps) {
   const gridRef = useRef<HTMLDivElement>(null)
   const visibleAreaRef = useRef<HTMLDivElement>(null)
@@ -54,6 +56,13 @@ export function Canvas({
     setLayout(layout.filter(item => item.id !== componentId))
     onSelect("") // Seçimi temizle
   }
+
+  const handleContentUpdate = (updatedConfig: LayoutConfig) => {
+    const newLayout = layout.map(item =>
+      item.id === updatedConfig.id ? updatedConfig : item
+    );
+    setLayout(newLayout);
+  };
 
   return (
     <div 
@@ -87,6 +96,7 @@ export function Canvas({
             onSelect={onSelect}
             renderComponentPreview={renderComponentPreview}
             onDelete={handleDeleteComponent}
+            onContentUpdate={handleContentUpdate}
             gridBounds={{
               width: VISIBLE_GRID.width,
               height: maxY,
