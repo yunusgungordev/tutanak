@@ -23,6 +23,7 @@ export interface ComponentProperties {
   resizable?: boolean
   options?: string[]
   multiple?: boolean
+  isVisible?: boolean
   validation?: {
     pattern?: string
     minLength?: number

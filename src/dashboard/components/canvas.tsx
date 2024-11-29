@@ -48,6 +48,25 @@ export function Canvas({
     }
   }
 
+  const handleTableRender = (item: LayoutConfig) => {
+    if (item.type === "table") {
+      return (
+        <div 
+          className="absolute"
+          style={{
+            width: item.properties.width,
+            height: item.properties.height,
+            left: item.properties.x,
+            top: item.properties.y,
+          }}
+        >
+          {renderComponentPreview(item)}
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div 
       className={cn(

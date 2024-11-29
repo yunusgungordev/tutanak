@@ -96,13 +96,47 @@ export function DynamicComponent({ config, fields }: DynamicComponentProps) {
             </Select>
           </div>
         );
+      case "table":
+        return (
+          <div className="w-full h-full border rounded-md bg-background overflow-hidden">
+            <div className="p-2 border-b bg-muted/30">
+              <span className="text-sm font-medium">
+                {config.properties.label || "Tablo"}
+              </span>
+            </div>
+            <div className="p-2 overflow-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    {(config.properties.headers || []).map((header: string, index: number) => (
+                      <th key={index} className="p-2 text-sm font-medium text-left border-b">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(config.properties.rows || [[]]).map((row: string[], rowIndex: number) => (
+                    <tr key={rowIndex}>
+                      {row.map((cell: string, cellIndex: number) => (
+                        <td key={cellIndex} className="p-2 text-sm border-b">
+                          {cell || ""}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
       default:
         return null;
     }
   };
 
   return (
-    <div style={style} className="!absolute">
+    <div style={style} className="absolute">
       {renderContent()}
     </div>
   );

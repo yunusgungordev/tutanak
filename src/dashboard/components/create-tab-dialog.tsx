@@ -124,14 +124,15 @@ const COMPONENTS: DraggableComponentType[] = [
       x: 0,
       y: 0,
       headers: ["Başlık 1", "Başlık 2", "Başlık 3"],
-      rows: [["", "", ""]],
+      rows: [["", "", ""], ["", "", ""]],
       striped: true,
       bordered: true,
       hoverable: true,
       sortable: false,
       resizable: true,
       pageSize: 5,
-      showPagination: false
+      showPagination: false,
+      isVisible: true
     }
   },
   {
@@ -930,56 +931,34 @@ function renderComponentPreview(item: LayoutConfig) {
       )
     case "table":
       return (
-        <div className={cn(
-          "w-full h-full bg-background p-2 overflow-auto",
-          item.properties.bordered && "border border-border rounded-md",
-        )}>
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                {item.properties.headers?.map((header, index) => (
-                  <th key={index} className="p-2 text-left font-medium text-sm">
-                    {header}
-                    {item.properties.sortable && (
-                      <button className="ml-1 opacity-50 hover:opacity-100">
-                        <ArrowUpDown className="h-3 w-3" />
-                      </button>
-                    )}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(item.properties.rows || [["", "", ""]]).map((row: string[], rowIndex: number) => (
-                <tr key={rowIndex} className={cn(
-                  "transition-colors",
-                  item.properties.striped && rowIndex % 2 === 1 && "bg-muted/50",
-                  item.properties.hoverable && "hover:bg-muted/70"
-                )}>
-                  {row.map((cell, cellIndex) => (
-                    <td key={cellIndex} className="p-2 text-sm border-t">
-                      {cell || ""}
-                    </td>
+        <div className="w-full h-full border rounded-md bg-muted/50 overflow-hidden">
+          <div className="p-2 border-b bg-muted/30">
+            <span className="text-sm font-medium">{item.properties.label || "Tablo"}</span>
+          </div>
+          <div className="p-2">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  {(item.properties.headers || []).map((header: string, index: number) => (
+                    <th key={index} className="p-1 text-sm font-medium text-left border-b">
+                      {header}
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          {item.properties.showPagination && (
-            <div className="flex items-center justify-between p-2 border-t mt-2">
-              <div className="text-sm text-muted-foreground">
-                1-{item.properties.pageSize} / {item.properties.rows?.length || 0}
-              </div>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="sm" disabled>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="sm" disabled>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+              </thead>
+              <tbody>
+                {(item.properties.rows || [[]]).map((row: string[], rowIndex: number) => (
+                  <tr key={rowIndex}>
+                    {row.map((cell: string, cellIndex: number) => (
+                      <td key={cellIndex} className="p-1 text-sm border-b">
+                        {cell || ""}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )
     default:

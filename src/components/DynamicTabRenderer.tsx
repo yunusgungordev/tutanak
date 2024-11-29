@@ -26,20 +26,15 @@ export const DynamicTabRenderer: React.FC<DynamicTabProps> = (props) => {
   const layout = Array.isArray(props.layout) ? props.layout : [];
   const fields = Array.isArray(props.fields) ? props.fields : [];
   
-  console.log('DynamicTabRenderer props:', props);
-  console.log('Layout:', layout);
-  
   return (
-    <div className="relative w-full h-full overflow-auto">
-      <div className="min-h-[200px] bg-muted/10 rounded-lg">
-        {layout.map((item) => (
-          <DynamicComponent
-            key={item.id}
-            config={item}
-            fields={fields}
-          />
-        ))}
-      </div>
+    <div className="relative w-full h-full p-4">
+      {layout.map((item) => (
+        <DynamicComponent
+          key={item.id}
+          config={item}
+          fields={fields}
+        />
+      ))}
     </div>
   );
 } 

@@ -158,8 +158,16 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
       const tabData = {
         id: nanoid(),
         label: config.label,
-        type: config.type,
-        layout: config.layout,
+        type: "dynamic",
+        layout: config.layout?.map(item => ({
+          ...item,
+          properties: {
+            ...item.properties,
+            isVisible: true,
+            rows: item.type === "table" ? item.properties.rows || [[]] : undefined,
+            headers: item.type === "table" ? item.properties.headers || [] : undefined
+          }
+        })),
         database: {
           table_name: config.database.table_name,
           fields: config.database.fields
@@ -167,13 +175,16 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
         created_at: new Date().toISOString()
       };
 
-      const result = await invoke('create_dynamic_tab', { tabData }) as boolean;
+      const result = await invoke('create_dynamic_tab', { tabData });
       
       if (result) {
-        addDynamicTab({
-          ...config,
-          id: tabData.id
-        });
+        const newTab = {
+          ...tabData,
+          component: DynamicTabRenderer,
+          icon: <Layout className="w-4 h-4" />
+        };
+        setTabs(prev => [...prev, newTab]);
+        setActiveTab(newTab);
         return true;
       }
       return false;
@@ -181,7 +192,7 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
       console.error('Tab kaydetme hatası:', error);
       return false;
     }
-  }
+  };
 
   const updateDynamicTab = (id: string, config: Partial<DynamicTabConfig>) => {
     setTabs(prev => prev.map(tab => 
@@ -214,63 +225,55 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
       const tabToUpdate = tabs.find(tab => tab.id === tabId);
       
       if (tabToUpdate?.type === "dynamic") {
-        // UI'da tab'ı güncelle
-        const updatedTabs = tabs.map((tab) =>
-          tab.id === tabId 
-            ? { 
-                ...tab,
-                label: config.label || tab.label,
-                layout: config.layout || tab.layout || [],
-                fields: config.fields || tab.fields || [],
-                database: {
-                  table_name: (config.label || tab.label)?.toLowerCase().replace(/\s+/g, '_'),
-                  fields: config.fields || tab.fields || []
-                }
-              } 
-            : tab
-        );
+        // Layout içindeki tablo verilerini kontrol et ve düzenle
+        const updatedLayout = (config.layout || []).map(item => {
+          if (item.type === "table") {
+            return {
+              ...item,
+              properties: {
+                ...item.properties,
+                rows: item.properties.rows || [[]],
+                headers: item.properties.headers || []
+              }
+            }
+          }
+          return item;
+        });
 
-        // Veritabanı güncellemesi için veriyi hazırla
         const updateData = {
+          ...config,
+          layout: updatedLayout,
           id: tabId,
-          label: config.label || tabToUpdate.label,
           type: "dynamic",
-          layout: config.layout || tabToUpdate.layout || [],
-          database: {
-            table_name: (config.label || tabToUpdate.label)?.toLowerCase().replace(/\s+/g, '_'),
-            fields: config.fields || tabToUpdate.fields || []
-          },
           created_at: tabToUpdate.created_at || new Date().toISOString()
         };
-
-        console.log('Gönderilen güncelleme verisi:', updateData);
 
         // Veritabanını güncelle
         const result = await invoke('update_tab', { tabData: updateData });
         
         if (result) {
           // State'i güncelle
-          setTabs(updatedTabs);
+          setTabs(prev => prev.map(tab => 
+            tab.id === tabId 
+              ? { 
+                  ...tab, 
+                  ...updateData,
+                  component: DynamicTabRenderer
+                }
+              : tab
+          ));
           
-          // Eğer aktif tab güncellendiyse, aktif tab'ı da güncelle
-          if (activeTab?.id === tabId) {
-            const updatedTab = updatedTabs.find(tab => tab.id === tabId);
-            if (updatedTab) {
-              setActiveTab(updatedTab);
-            }
-          }
-
           toast.success("Tab başarıyla güncellendi");
           return true;
         }
-        return false;
       }
+      return false;
     } catch (error) {
       console.error('Tab güncelleme hatası:', error);
       toast.error("Tab güncellenirken bir hata oluştu");
       return false;
     }
-  };
+  }
 
   return (
     <TabContext.Provider value={{ 
