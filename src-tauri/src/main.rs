@@ -10,14 +10,17 @@ use std::path::PathBuf;
 use std::fs;
 
 fn get_db_path() -> PathBuf {
-    let exe_dir = std::env::current_exe()
-        .expect("Failed to get current exe path")
-        .parent()
-        .expect("Failed to get parent directory")
-        .to_path_buf();
+    let app_data = std::env::var("APPDATA")
+        .expect("APPDATA environment variable not found");
+    let db_dir = PathBuf::from(app_data).join("tutanak");
     
-    // Program Files\tutanak\resources\data.db
-    exe_dir.join("resources").join("data.db")
+    // Dizin yoksa oluştur
+    if !db_dir.exists() {
+        std::fs::create_dir_all(&db_dir)
+            .expect("Failed to create database directory");
+    }
+    
+    db_dir.join("data.db")
 }
 
 fn migrate_database() -> Result<(), String> {
@@ -71,20 +74,54 @@ async fn init_database() -> Result<(), String> {
 fn initialize_database() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let db_path = get_db_path();
     
-    if !db_path.exists() {
-        if let Some(parent) = db_path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        
-        let resource_path = std::env::current_exe()?
-            .parent()
-            .ok_or("Failed to get exe parent")?
-            .join("resources");
-        let source_path = resource_path.join("data.db");
-        if source_path.exists() {
-            fs::copy(source_path, &db_path)?;
-        }
-    }
+    // Veritabanı bağlantısını oluştur
+    let conn = Connection::open(&db_path)?;
+    
+    // Notes tablosunu oluştur
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            priority TEXT NOT NULL,
+            date TEXT NOT NULL,
+            time TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            due_date TEXT,
+            reminder INTEGER DEFAULT 0,
+            last_notified TEXT
+        )",
+        [],
+    )?;
+    
+    // Templates tablosunu oluştur
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS templates (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            note TEXT,
+            template_type TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        [],
+    )?;
+    
+    // Tabs tablosunu oluştur
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS tabs (
+            id TEXT PRIMARY KEY,
+            label TEXT NOT NULL,
+            type TEXT NOT NULL,
+            layout TEXT NOT NULL,
+            database TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )",
+        [],
+    )?;
     
     Ok(())
 }
@@ -206,54 +243,109 @@ async fn save_excel_data(data: String, sheet_name: String) -> Result<(), String>
 
 #[tauri::command]
 async fn save_note(note: Note) -> Result<Note, String> {
-    let cloned_note = note.clone();
-    let conn = Connection::open(get_db_path()).map_err(|e| {
-        println!("Database connection error: {}", e);
-        e.to_string()
+    println!("Not kaydediliyor: {:?}", note);
+    
+    let db_path = get_db_path();
+    println!("Veritabanı yolu: {:?}", db_path);
+    
+    if !db_path.exists() {
+        println!("Veritabanı dosyası bulunamadı, oluşturuluyor...");
+        initialize_database().map_err(|e| format!("Veritabanı başlatma hatası: {}", e))?;
+    }
+    
+    let mut conn = Connection::open(&db_path).map_err(|e| {
+        println!("Veritabanı bağlantı hatası: {}", e);
+        format!("Veritabanı bağlantı hatası: {}", e)
+    })?;
+    
+    // Notes tablosunu kontrol et ve oluştur
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            priority TEXT NOT NULL,
+            date TEXT NOT NULL,
+            time TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            due_date TEXT,
+            reminder INTEGER DEFAULT 0,
+            last_notified TEXT
+        )",
+        [],
+    ).map_err(|e| format!("Tablo oluşturma hatası: {}", e))?;
+    
+    let note_clone = note.clone();
+    let status = note.status.unwrap_or_else(|| "pending".to_string());
+    let due_date = note.due_date.unwrap_or_default();
+    let last_notified = note.last_notified.unwrap_or_default();
+    let reminder = note.reminder.unwrap_or(false);
+
+    println!("SQL değerleri: {:?}", [
+        &note_clone.title,
+        &note_clone.content,
+        &note_clone.priority,
+        &note_clone.date,
+        &note_clone.time,
+        &note_clone.created_at,
+        &note_clone.updated_at,
+        &status,
+        &due_date,
+        &(reminder as i32).to_string(),
+        &last_notified
+    ]);
+
+    let tx = conn.transaction().map_err(|e| {
+        println!("Transaction başlatma hatası: {}", e);
+        format!("Transaction başlatma hatası: {}", e)
     })?;
 
-    conn.execute(
+    let result = tx.execute(
         "INSERT INTO notes (
-            title, content, priority, date, time, created_at, updated_at,
-            status, due_date, reminder, last_notified
+            title, content, priority, date, time, 
+            created_at, updated_at, status, due_date, 
+            reminder, last_notified
         ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         [
-            &cloned_note.title,
-            &cloned_note.content,
-            &cloned_note.priority,
-            &cloned_note.date,
-            &cloned_note.time,
-            &cloned_note.created_at,
-            &cloned_note.updated_at,
-            &cloned_note.status.unwrap_or_else(|| "pending".to_string()),
-            &cloned_note.due_date.unwrap_or_default(),
-            &(cloned_note.reminder.unwrap_or(false) as i32).to_string(),
-            &cloned_note.last_notified.unwrap_or_default()
+            &note_clone.title,
+            &note_clone.content,
+            &note_clone.priority,
+            &note_clone.date,
+            &note_clone.time,
+            &note_clone.created_at,
+            &note_clone.updated_at,
+            &status,
+            &due_date,
+            &(reminder as i32).to_string(),
+            &last_notified
         ],
-    ).map_err(|e| {
-        println!("Insert error: {}", e);
-        e.to_string()
-    })?;
+    );
 
-    let id = conn.last_insert_rowid();
-    
-    println!("Not başarıyla kaydedildi. ID: {}", id);
-    
-    let new_note = Note {
-        id: Some(id as i32),
-        title: cloned_note.title,
-        content: cloned_note.content,
-        priority: cloned_note.priority,
-        date: cloned_note.date,
-        time: cloned_note.time,
-        created_at: cloned_note.created_at,
-        updated_at: cloned_note.updated_at,
-        status: Some("pending".to_string()),
-        due_date: Some("".to_string()),
-        reminder: Some(false),
-        last_notified: Some("".to_string()),
-    };
-    Ok(new_note)
+    match result {
+        Ok(_) => {
+            let id = tx.last_insert_rowid();
+            tx.commit().map_err(|e| {
+                println!("Transaction commit hatası: {}", e);
+                format!("Transaction commit hatası: {}", e)
+            })?;
+            
+            println!("Not başarıyla kaydedildi, ID: {}", id);
+            Ok(Note {
+                id: Some(id as i32),
+                ..note_clone
+            })
+        },
+        Err(e) => {
+            println!("Not kaydetme hatası: {}", e);
+            tx.rollback().map_err(|re| {
+                println!("Transaction rollback hatası: {}", re);
+                format!("Transaction rollback hatası: {}", re)
+            })?;
+            Err(format!("Not kaydetme hatası: {}", e))
+        }
+    }
 }
 
 #[tauri::command]

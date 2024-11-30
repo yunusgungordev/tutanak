@@ -63,10 +63,15 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   const addNote = async (note: Omit<TimelineNote, "id" | "status">) => {
     try {
+      // Veri doğrulama
+      if (!note.title?.trim() || !note.content?.trim()) {
+        throw new Error("Başlık ve içerik alanları zorunludur");
+      }
+
       const noteData = {
         id: null,
-        title: note.title,
-        content: note.content,
+        title: note.title.trim(),
+        content: note.content.trim(),
         priority: note.priority,
         date: format(note.date, 'yyyy-MM-dd'),
         time: note.dueDate ? format(note.dueDate, 'HH:mm') : '00:00',
@@ -74,12 +79,20 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         updated_at: new Date().toISOString(),
         status: "pending",
         due_date: note.dueDate?.toISOString(),
-        reminder: note.reminder,
+        reminder: note.reminder ?? false,
         last_notified: note.lastNotified?.toISOString()
       };
 
-      const savedNote = await invoke<any>('save_note', { note: noteData });
-      
+      const savedNote = await invoke<any>('save_note', { note: noteData })
+        .catch(error => {
+          console.error('Not kaydetme hatası:', error);
+          throw new Error('Not kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.');
+        });
+
+      if (!savedNote || !savedNote.id) {
+        throw new Error('Not kaydedilirken beklenmeyen bir hata oluştu');
+      }
+
       const timelineNote: TimelineNote = {
         id: savedNote.id.toString(),
         title: savedNote.title,
@@ -96,8 +109,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
       
       return timelineNote;
     } catch (error) {
-      console.error('Not eklenirken hata:', error);
-      throw error;
+      console.error('Not ekleme hatası:', error);
+      throw error instanceof Error ? error : new Error('Bilinmeyen bir hata oluştu');
     }
   };
 

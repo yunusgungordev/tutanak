@@ -35,21 +35,25 @@ export function AddNoteDialog() {
   const [error, setError] = useState("")
 
   const handleSubmit = async () => {
-    if (!title || !content || !priority || !date) {
-      setError("Lütfen tüm alanları doldurun");
-      return;
-    }
-    
     try {
-      // Tarih ve saat birleştirme
+      if (!title?.trim()) {
+        setError("Başlık alanı zorunludur");
+        return;
+      }
+
+      if (!content?.trim()) {
+        setError("İçerik alanı zorunludur");
+        return;
+      }
+
       const dueDate = time ? 
         new Date(date.getFullYear(), date.getMonth(), date.getDate(), 
           parseInt(time.split(':')[0]), parseInt(time.split(':')[1])) : 
         new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59);
 
       const note = {
-        title,
-        content,
+        title: title.trim(),
+        content: content.trim(),
         priority,
         date,
         dueDate,
@@ -67,7 +71,6 @@ export function AddNoteDialog() {
       setTime('');
       setError('');
       
-      // Dialog'u kapat
       setOpen(false);
       
       toast({
@@ -75,10 +78,10 @@ export function AddNoteDialog() {
         variant: "default",
       });
     } catch (error) {
-      console.error('Not kaydetme hatası:', error);
-      setError('Not kaydedilirken bir hata oluştu');
+      const errorMessage = error instanceof Error ? error.message : 'Not kaydedilirken bir hata oluştu';
+      setError(errorMessage);
       toast({
-        title: "Not kaydedilirken bir hata oluştu",
+        title: errorMessage,
         variant: "destructive",
       });
     }
