@@ -6,6 +6,88 @@
 
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
+use std::fs;
+
+fn get_db_path() -> PathBuf {
+    let exe_dir = std::env::current_exe()
+        .expect("Failed to get current exe path")
+        .parent()
+        .expect("Failed to get parent directory")
+        .to_path_buf();
+    
+    // Program Files\tutanak\resources\data.db
+    exe_dir.join("resources").join("data.db")
+}
+
+fn migrate_database() -> Result<(), String> {
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
+    
+    // Eski tabloyu sil
+    conn.execute("DROP TABLE IF EXISTS notes", [])
+        .map_err(|e| e.to_string())?;
+    
+    // Yeni tabloyu oluştur
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS notes (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            priority TEXT NOT NULL,
+            date TEXT NOT NULL,
+            time TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            due_date TEXT,
+            reminder INTEGER DEFAULT 0,
+            last_notified TEXT
+        )",
+        [],
+    ).map_err(|e| e.to_string())?;
+
+    // Templates tablosunu oluştur
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS templates (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            note TEXT,
+            template_type TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        [],
+    ).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+async fn init_database() -> Result<(), String> {
+    migrate_database()
+}
+
+fn initialize_database() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    let db_path = get_db_path();
+    
+    if !db_path.exists() {
+        if let Some(parent) = db_path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        
+        let resource_path = std::env::current_exe()?
+            .parent()
+            .ok_or("Failed to get exe parent")?
+            .join("resources");
+        let source_path = resource_path.join("data.db");
+        if source_path.exists() {
+            fs::copy(source_path, &db_path)?;
+        }
+    }
+    
+    Ok(())
+}
 
 #[derive(Serialize, Deserialize)]
 struct ExcelData {
@@ -99,7 +181,7 @@ struct SavedTab {
 
 #[tauri::command]
 async fn save_excel_data(data: String, sheet_name: String) -> Result<(), String> {
-    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     conn.execute(
         "CREATE TABLE IF NOT EXISTS excel_data (
@@ -124,7 +206,7 @@ async fn save_excel_data(data: String, sheet_name: String) -> Result<(), String>
 
 #[tauri::command]
 async fn save_note(note: Note) -> Result<(), String> {
-    let conn = Connection::open("./data.db").map_err(|e| {
+    let conn = Connection::open(get_db_path()).map_err(|e| {
         println!("Database connection error: {}", e);
         e.to_string()
     })?;
@@ -174,7 +256,7 @@ async fn save_note(note: Note) -> Result<(), String> {
 
 #[tauri::command]
 async fn get_notes() -> Result<Vec<Note>, String> {
-    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     let mut stmt = conn.prepare(
         "SELECT id, title, content, priority, date, time, created_at, updated_at FROM notes"
@@ -203,7 +285,7 @@ async fn get_notes() -> Result<Vec<Note>, String> {
 
 #[tauri::command]
 async fn save_template(template: Template) -> Result<(), String> {
-    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     conn.execute(
         "CREATE TABLE IF NOT EXISTS templates (
@@ -236,7 +318,7 @@ async fn save_template(template: Template) -> Result<(), String> {
 
 #[tauri::command]
 async fn get_templates() -> Result<Vec<Template>, String> {
-    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     let mut stmt = conn.prepare(
         "SELECT id, title, description, note, template_type, created_at, updated_at FROM templates"
@@ -260,7 +342,7 @@ async fn get_templates() -> Result<Vec<Template>, String> {
 
 #[tauri::command]
 async fn delete_template(id: i32) -> Result<(), String> {
-    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     conn.execute(
         "DELETE FROM templates WHERE id = ?1",
@@ -272,7 +354,7 @@ async fn delete_template(id: i32) -> Result<(), String> {
 
 #[tauri::command]
 async fn create_dynamic_tab(tab_data: TabData) -> Result<bool, String> {
-    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     // Debug için
     println!("Gelen layout verisi: {:?}", tab_data.layout);
@@ -313,7 +395,7 @@ async fn create_dynamic_tab(tab_data: TabData) -> Result<bool, String> {
 
 #[tauri::command]
 async fn get_tabs() -> Result<Vec<SavedTab>, String> {
-    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     // Tabs tablosunu oluştur (eğer yoksa)
     conn.execute(
@@ -349,7 +431,7 @@ async fn get_tabs() -> Result<Vec<SavedTab>, String> {
 
 #[tauri::command]
 async fn delete_tab(id: String) -> Result<(), String> {
-    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     conn.execute(
         "DELETE FROM tabs WHERE id = ?1",
@@ -361,7 +443,7 @@ async fn delete_tab(id: String) -> Result<(), String> {
 
 #[tauri::command]
 async fn update_tab(tab_data: TabData) -> Result<bool, String> {
-    let conn = Connection::open("./data.db").map_err(|e| e.to_string())?;
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     // Layout ve database verilerini JSON'a dönüştür
     let layout_json = serde_json::to_string(&tab_data.layout)
@@ -385,6 +467,10 @@ async fn update_tab(tab_data: TabData) -> Result<bool, String> {
 }
 
 fn main() {
+    // Veritabanını başlat
+    if let Err(e) = initialize_database() {
+        eprintln!("Veritabanı başlatma hatası: {}", e);
+    }
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             save_excel_data, 
@@ -396,7 +482,8 @@ fn main() {
             create_dynamic_tab,
             get_tabs,
             delete_tab,
-            update_tab
+            update_tab,
+            init_database
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
