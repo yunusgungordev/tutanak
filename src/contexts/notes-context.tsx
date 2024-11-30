@@ -68,7 +68,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         title: note.title,
         content: note.content,
         priority: note.priority,
-        date: note.date.toISOString(),
+        date: format(note.date, 'yyyy-MM-dd'),
         time: note.dueDate ? format(note.dueDate, 'HH:mm') : '00:00',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -78,23 +78,23 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         last_notified: note.lastNotified?.toISOString()
       };
 
-      await invoke('save_note', { note: noteData });
+      const savedNote = await invoke<any>('save_note', { note: noteData });
       
-      // Notları yeniden yükle
-      const dbNotes = await invoke<TimelineNote[]>('get_notes');
-      const timelineNotes: TimelineNote[] = dbNotes.map(note => ({
-        id: note.id?.toString() || crypto.randomUUID(),
-        title: note.title,
-        content: note.content,
-        date: new Date(note.date),
-        priority: note.priority as "low" | "medium" | "high",
+      const timelineNote: TimelineNote = {
+        id: savedNote.id.toString(),
+        title: savedNote.title,
+        content: savedNote.content,
+        date: new Date(savedNote.date),
+        priority: savedNote.priority as "low" | "medium" | "high",
         status: "pending",
-        dueDate: note.dueDate ? new Date(note.dueDate) : undefined,
-        reminder: note.reminder,
-        lastNotified: note.lastNotified ? new Date(note.lastNotified) : undefined
-      }));
+        dueDate: savedNote.due_date ? new Date(savedNote.due_date) : undefined,
+        reminder: savedNote.reminder,
+        lastNotified: savedNote.last_notified ? new Date(savedNote.last_notified) : undefined
+      };
+
+      setNotes(prev => [timelineNote, ...prev].sort((a, b) => b.date.getTime() - a.date.getTime()));
       
-      setNotes(timelineNotes);
+      return timelineNote;
     } catch (error) {
       console.error('Not eklenirken hata:', error);
       throw error;

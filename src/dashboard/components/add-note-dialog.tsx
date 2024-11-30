@@ -41,42 +41,39 @@ export function AddNoteDialog() {
     }
     
     try {
-      const noteData = {
-        id: null,
+      // Tarih ve saat birleştirme
+      const dueDate = time ? 
+        new Date(date.getFullYear(), date.getMonth(), date.getDate(), 
+          parseInt(time.split(':')[0]), parseInt(time.split(':')[1])) : 
+        new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59);
+
+      const note = {
         title,
         content,
         priority,
-        date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
-        time: time || "00:00",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        date,
+        dueDate,
+        reminder,
+        lastNotified: undefined
       };
 
-      console.log('Gönderilen veri:', noteData); // Debug için
-
-      await invoke('save_note', { note: noteData })
-        .then(() => {
-          // Form alanlarını temizle
-          setTitle('');
-          setContent('');
-          setPriority('low');
-          setDate(new Date());
-          setTime('');
-          setError('');
-          
-          // Dialog'u kapat
-          setOpen(false);
-          
-          toast({
-            title: "Not başarıyla kaydedildi",
-            variant: "default",
-          });
-        })
-        .catch((err) => {
-          console.error('Not kaydetme hatası:', err);
-          throw err;
-        });
+      await addNote(note);
       
+      // Form alanlarını temizle
+      setTitle('');
+      setContent('');
+      setPriority('low');
+      setDate(new Date());
+      setTime('');
+      setError('');
+      
+      // Dialog'u kapat
+      setOpen(false);
+      
+      toast({
+        title: "Not başarıyla kaydedildi",
+        variant: "default",
+      });
     } catch (error) {
       console.error('Not kaydetme hatası:', error);
       setError('Not kaydedilirken bir hata oluştu');

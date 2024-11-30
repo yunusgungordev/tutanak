@@ -98,7 +98,7 @@ struct ExcelData {
     updated_at: String
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Note {
     id: Option<i32>,
     title: String,
@@ -205,53 +205,55 @@ async fn save_excel_data(data: String, sheet_name: String) -> Result<(), String>
 }
 
 #[tauri::command]
-async fn save_note(note: Note) -> Result<(), String> {
+async fn save_note(note: Note) -> Result<Note, String> {
+    let cloned_note = note.clone();
     let conn = Connection::open(get_db_path()).map_err(|e| {
         println!("Database connection error: {}", e);
         e.to_string()
     })?;
-    
-    println!("Veritabanı bağlantısı başarılı.");
 
     conn.execute(
-        "CREATE TABLE IF NOT EXISTS notes (
-            id INTEGER PRIMARY KEY,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            priority TEXT NOT NULL,
-            date TEXT NOT NULL,
-            time TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )",
-        [],
-    ).map_err(|e| {
-        println!("Table creation error: {}", e);
-        e.to_string()
-    })?;
-
-    println!("Tablo oluşturuldu veya zaten mevcut.");
-
-    conn.execute(
-        "INSERT INTO notes (title, content, priority, date, time, created_at, updated_at) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        "INSERT INTO notes (
+            title, content, priority, date, time, created_at, updated_at,
+            status, due_date, reminder, last_notified
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         [
-            &note.title,
-            &note.content,
-            &note.priority,
-            &note.date,
-            &note.time,
-            &note.created_at,
-            &note.updated_at
+            &cloned_note.title,
+            &cloned_note.content,
+            &cloned_note.priority,
+            &cloned_note.date,
+            &cloned_note.time,
+            &cloned_note.created_at,
+            &cloned_note.updated_at,
+            &cloned_note.status.unwrap_or_else(|| "pending".to_string()),
+            &cloned_note.due_date.unwrap_or_default(),
+            &(cloned_note.reminder.unwrap_or(false) as i32).to_string(),
+            &cloned_note.last_notified.unwrap_or_default()
         ],
     ).map_err(|e| {
         println!("Insert error: {}", e);
         e.to_string()
     })?;
 
-    println!("Not başarıyla kaydedildi.");
+    let id = conn.last_insert_rowid();
     
-    Ok(())
+    println!("Not başarıyla kaydedildi. ID: {}", id);
+    
+    let new_note = Note {
+        id: Some(id as i32),
+        title: cloned_note.title,
+        content: cloned_note.content,
+        priority: cloned_note.priority,
+        date: cloned_note.date,
+        time: cloned_note.time,
+        created_at: cloned_note.created_at,
+        updated_at: cloned_note.updated_at,
+        status: Some("pending".to_string()),
+        due_date: Some("".to_string()),
+        reminder: Some(false),
+        last_notified: Some("".to_string()),
+    };
+    Ok(new_note)
 }
 
 #[tauri::command]
@@ -259,7 +261,10 @@ async fn get_notes() -> Result<Vec<Note>, String> {
     let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     let mut stmt = conn.prepare(
-        "SELECT id, title, content, priority, date, time, created_at, updated_at FROM notes"
+        "SELECT id, title, content, priority, date, time, created_at, updated_at, 
+                status, due_date, reminder, last_notified 
+         FROM notes 
+         ORDER BY created_at DESC"
     ).map_err(|e| e.to_string())?;
     
     let notes = stmt.query_map([], |row| {
@@ -272,10 +277,10 @@ async fn get_notes() -> Result<Vec<Note>, String> {
             time: row.get(5)?,
             created_at: row.get(6)?,
             updated_at: row.get(7)?,
-            status: None,
-            due_date: None,
-            reminder: None,
-            last_notified: None
+            status: row.get(8)?,
+            due_date: row.get(9)?,
+            reminder: row.get(10)?,
+            last_notified: row.get(11)?
         })
     }).map_err(|e| e.to_string())?;
     
