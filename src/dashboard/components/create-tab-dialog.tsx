@@ -178,29 +178,6 @@ const COMPONENTS: DraggableComponentType[] = [
       y: 0,
       pageSize: 5
     }
-  },
-  {
-    id: "a4",
-    type: "a4",
-    label: "A4 Belgesi",
-    icon: <File className="w-4 h-4" />,
-    defaultProps: {
-      label: "Yeni A4 Belgesi",
-      width: 595, // A4 genişliği (72 dpi)
-      height: 842, // A4 yüksekliği (72 dpi)
-      x: 0,
-      y: 0,
-      content: "",
-      fontSize: 12,
-      fontFamily: "Arial",
-      lineHeight: 1.5,
-      margins: {
-        top: 40,
-        right: 40,
-        bottom: 40,
-        left: 40
-      }
-    }
   }
 ]
 
@@ -633,35 +610,6 @@ const COMPONENT_CATEGORIES = [
         }
       }
     ]
-  },
-  {
-    title: "Belge Bileşenleri",
-    components: [
-      {
-        id: "a4",
-        type: "a4",
-        label: "A4 Belgesi",
-        description: "Standart A4 boyutunda belge",
-        icon: <File className="w-4 h-4" />,
-        defaultProps: {
-          label: "Yeni A4 Belgesi",
-          width: 595,
-          height: 842,
-          x: 0,
-          y: 0,
-          content: "",
-          fontSize: 12,
-          fontFamily: "Arial",
-          lineHeight: 1.5,
-          margins: {
-            top: 40,
-            right: 40,
-            bottom: 40,
-            left: 40
-          }
-        }
-      }
-    ]
   }
 ]
 
@@ -1050,15 +998,6 @@ function renderComponentPreview(item: LayoutConfig) {
           </div>
         </div>
       )
-    case "a4":
-      return (
-        <div className="w-full h-full bg-white border rounded-md p-4 overflow-auto">
-          <div className="text-sm font-medium mb-2">{item.properties.label}</div>
-          <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-            {item.properties.content || "İçerik bulunmuyor"}
-          </div>
-        </div>
-      );
     default:
       return null
   }
