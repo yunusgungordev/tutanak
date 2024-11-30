@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, useEffect } from "react"
-import { startOfDay } from "date-fns"
+import { createContext, useContext, useEffect, useState } from "react"
 import { invoke } from "@tauri-apps/api/tauri"
-import { format } from "date-fns"
+import { format, startOfDay } from "date-fns"
 
 interface TimelineNote {
   id: string
@@ -35,11 +34,11 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadNotes = async () => {
       try {
-        const dbNotes = await invoke<TimelineNote[]>('get_notes')
-        const timelineNotes: TimelineNote[] = dbNotes.map(note => {
-          const [year, month, day] = note.date.toString().split('-').map(Number);
-          const localDate = new Date(year, month - 1, day);
-          
+        const dbNotes = await invoke<TimelineNote[]>("get_notes")
+        const timelineNotes: TimelineNote[] = dbNotes.map((note) => {
+          const [year, month, day] = note.date.toString().split("-").map(Number)
+          const localDate = new Date(year, month - 1, day)
+
           return {
             id: note.id?.toString() || crypto.randomUUID(),
             title: note.title,
@@ -49,12 +48,14 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             status: "pending",
             dueDate: note.dueDate ? new Date(note.dueDate) : undefined,
             reminder: note.reminder,
-            lastNotified: note.lastNotified ? new Date(note.lastNotified) : undefined
+            lastNotified: note.lastNotified
+              ? new Date(note.lastNotified)
+              : undefined,
           }
         })
         setNotes(timelineNotes)
       } catch (error) {
-        console.error('Notlar yüklenirken hata:', error)
+        console.error("Notlar yüklenirken hata:", error)
       }
     }
 
@@ -65,7 +66,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     try {
       // Veri doğrulama
       if (!note.title?.trim() || !note.content?.trim()) {
-        throw new Error("Başlık ve içerik alanları zorunludur");
+        throw new Error("Başlık ve içerik alanları zorunludur")
       }
 
       const noteData = {
@@ -73,24 +74,27 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         title: note.title.trim(),
         content: note.content.trim(),
         priority: note.priority,
-        date: format(note.date, 'yyyy-MM-dd'),
-        time: note.dueDate ? format(note.dueDate, 'HH:mm') : '00:00',
+        date: format(note.date, "yyyy-MM-dd"),
+        time: note.dueDate ? format(note.dueDate, "HH:mm") : "00:00",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         status: "pending",
         due_date: note.dueDate?.toISOString(),
         reminder: note.reminder ?? false,
-        last_notified: note.lastNotified?.toISOString()
-      };
+        last_notified: note.lastNotified?.toISOString(),
+      }
 
-      const savedNote = await invoke<any>('save_note', { note: noteData })
-        .catch(error => {
-          console.error('Not kaydetme hatası:', error);
-          throw new Error('Not kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.');
-        });
+      const savedNote = await invoke<any>("save_note", {
+        note: noteData,
+      }).catch((error) => {
+        console.error("Not kaydetme hatası:", error)
+        throw new Error(
+          "Not kaydedilirken bir hata oluştu. Lütfen tekrar deneyin."
+        )
+      })
 
       if (!savedNote || !savedNote.id) {
-        throw new Error('Not kaydedilirken beklenmeyen bir hata oluştu');
+        throw new Error("Not kaydedilirken beklenmeyen bir hata oluştu")
       }
 
       const timelineNote: TimelineNote = {
@@ -102,61 +106,73 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         status: "pending",
         dueDate: savedNote.due_date ? new Date(savedNote.due_date) : undefined,
         reminder: savedNote.reminder,
-        lastNotified: savedNote.last_notified ? new Date(savedNote.last_notified) : undefined
-      };
+        lastNotified: savedNote.last_notified
+          ? new Date(savedNote.last_notified)
+          : undefined,
+      }
 
-      setNotes(prev => [timelineNote, ...prev].sort((a, b) => b.date.getTime() - a.date.getTime()));
-      
-      return timelineNote;
+      setNotes((prev) =>
+        [timelineNote, ...prev].sort(
+          (a, b) => b.date.getTime() - a.date.getTime()
+        )
+      )
+
+      return timelineNote
     } catch (error) {
-      console.error('Not ekleme hatası:', error);
-      throw error instanceof Error ? error : new Error('Bilinmeyen bir hata oluştu');
+      console.error("Not ekleme hatası:", error)
+      throw error instanceof Error
+        ? error
+        : new Error("Bilinmeyen bir hata oluştu")
     }
-  };
+  }
 
   const updateNoteStatus = (id: string, status: TimelineNote["status"]) => {
-    setNotes(prev => prev.map(note => 
-      note.id === id ? { ...note, status } : note
-    ))
+    setNotes((prev) =>
+      prev.map((note) => (note.id === id ? { ...note, status } : note))
+    )
   }
 
   const deleteNote = (id: string) => {
-    setNotes(prev => prev.filter(note => note.id !== id))
+    setNotes((prev) => prev.filter((note) => note.id !== id))
   }
 
   const updateNoteLastNotified = (id: string) => {
-    setNotes(prev => prev.map(note => 
-      note.id === id ? { ...note, lastNotified: new Date() } : note
-    ))
+    setNotes((prev) =>
+      prev.map((note) =>
+        note.id === id ? { ...note, lastNotified: new Date() } : note
+      )
+    )
   }
 
   const searchNotes = (query: string, dateFilteredNotes?: TimelineNote[]) => {
     if (!query.trim()) {
-      setSearchResults([]);
-      return;
+      setSearchResults([])
+      return
     }
 
-    const notesToSearch = dateFilteredNotes || notes;
-    
-    const results = notesToSearch.filter(note => {
-      const searchableContent = `${note.title} ${note.content}`.toLowerCase();
-      return searchableContent.includes(query.toLowerCase());
-    });
+    const notesToSearch = dateFilteredNotes || notes
 
-    setSearchResults(results);
-  };
+    const results = notesToSearch.filter((note) => {
+      const searchableContent = `${note.title} ${note.content}`.toLowerCase()
+      return searchableContent.includes(query.toLowerCase())
+    })
+
+    setSearchResults(results)
+  }
 
   useEffect(() => {
     const checkOverdueNotes = () => {
       const now = new Date()
-      setNotes(prev => prev.map(note => {
-        if (note.dueDate && note.status === "pending") {
-          if (startOfDay(note.dueDate) < startOfDay(now)) {
-            return { ...note, status: "overdue" }
+      setNotes((prev) =>
+        prev.map((note) => {
+          if (note.dueDate && note.status === "pending") {
+            if (startOfDay(note.dueDate) < startOfDay(now)) {
+              return { ...note, status: "overdue" }
+            }
           }
-        }
-        return note
-      }))
+          return note
+        })
+      )
     }
 
     checkOverdueNotes()
@@ -165,16 +181,18 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <NotesContext.Provider value={{ 
-      notes, 
-      searchResults,
-      setSearchResults,
-      addNote, 
-      updateNoteStatus, 
-      deleteNote,
-      updateNoteLastNotified,
-      searchNotes
-    }}>
+    <NotesContext.Provider
+      value={{
+        notes,
+        searchResults,
+        setSearchResults,
+        addNote,
+        updateNoteStatus,
+        deleteNote,
+        updateNoteLastNotified,
+        searchNotes,
+      }}
+    >
       {children}
     </NotesContext.Provider>
   )
@@ -184,4 +202,4 @@ export const useNotes = () => {
   const context = useContext(NotesContext)
   if (!context) throw new Error("useNotes must be used within NotesProvider")
   return context
-} 
+}

@@ -1,20 +1,25 @@
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import { Plus, Pencil, Trash2 } from "lucide-react"
 import { useState } from "react"
+import { useTabContext } from "@/contexts/tab-context"
 import { CreateTabDialog } from "@/dashboard/components/create-tab-dialog"
 import { DeleteTabDialog } from "@/dashboard/components/delete-tab-dialog"
-import { useTabContext } from "@/contexts/tab-context"
+import { Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "react-hot-toast"
+
 import { TabContent } from "@/types/tab"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 export function TabBar() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const { tabs, activeTab, setActiveTab, removeTab, updateTab } = useTabContext()
+  const { tabs, activeTab, setActiveTab, removeTab, updateTab } =
+    useTabContext()
   const [editingTabId, setEditingTabId] = useState<string | null>(null)
   const [editingTabName, setEditingTabName] = useState("")
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [tabToDelete, setTabToDelete] = useState<{ id: string; label: string } | null>(null)
+  const [tabToDelete, setTabToDelete] = useState<{
+    id: string
+    label: string
+  } | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [tabToEdit, setTabToEdit] = useState<TabContent | null>(null)
 
@@ -23,7 +28,10 @@ export function TabBar() {
     setEditDialogOpen(true)
   }
 
-  const handleDeleteClick = (e: React.MouseEvent, tab: { id: string; label: string }) => {
+  const handleDeleteClick = (
+    e: React.MouseEvent,
+    tab: { id: string; label: string }
+  ) => {
     e.stopPropagation()
     setTabToDelete(tab)
     setDeleteDialogOpen(true)
@@ -42,18 +50,15 @@ export function TabBar() {
   }
 
   return (
-    <div className="flex flex-col gap-1 p-2 border-r h-full">
+    <div className="flex h-full flex-col gap-1 border-r p-2">
       <div className="space-y-1">
         {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            className="group relative"
-          >
+          <div key={tab.id} className="group relative">
             <Button
               variant={activeTab.id === tab.id ? "default" : "ghost"}
               size="sm"
               className={cn(
-                "w-full flex items-center gap-1 justify-start px-2 py-1",
+                "flex w-full items-center justify-start gap-1 px-2 py-1",
                 activeTab.id === tab.id && "bg-primary text-primary-foreground"
               )}
               onClick={() => setActiveTab(tab)}
@@ -61,9 +66,9 @@ export function TabBar() {
               {tab.icon}
               <span className="text-xs">{tab.label}</span>
             </Button>
-            
+
             {!isDefaultTab(tab.type) && (
-              <div className="hidden group-hover:flex absolute right-1 top-1/2 -translate-y-1/2 items-center gap-0.5 bg-background/80 rounded px-0.5">
+              <div className="absolute right-1 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded bg-background/80 px-0.5 group-hover:flex">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -87,24 +92,24 @@ export function TabBar() {
             )}
           </div>
         ))}
-        
+
         <Button
           variant="ghost"
           size="sm"
           className="w-full"
           onClick={() => setCreateDialogOpen(true)}
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="h-4 w-4" />
         </Button>
       </div>
 
-      <CreateTabDialog 
+      <CreateTabDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
       />
 
       {tabToEdit && (
-        <CreateTabDialog 
+        <CreateTabDialog
           open={editDialogOpen}
           onOpenChange={setEditDialogOpen}
           editMode={true}
@@ -122,4 +127,4 @@ export function TabBar() {
       )}
     </div>
   )
-} 
+}

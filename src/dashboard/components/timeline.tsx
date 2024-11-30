@@ -1,17 +1,26 @@
-import { useState, useEffect, useRef } from "react"
-import { Card } from "@/components/ui/card"
-import { format, startOfYear, startOfMonth, startOfDay, subDays, addDays } from "date-fns"
-import { tr } from "date-fns/locale"
-import { motion, AnimatePresence } from "framer-motion"
-import { useGesture } from "@use-gesture/react"
+import { useEffect, useRef, useState } from "react"
 import { useNotes } from "@/contexts/notes-context"
-import { Bell, CheckCircle, Clock, Minimize2, Maximize2 } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { AddNoteDialog } from "./add-note-dialog"
-import { Button } from "@/components/ui/button"
-import { NotificationBell } from "./notification-bell"
-import { Input } from "@/components/ui/input"
 import { useTimeline } from "@/contexts/timeline-context"
+import { useGesture } from "@use-gesture/react"
+import {
+  addDays,
+  format,
+  startOfDay,
+  startOfMonth,
+  startOfYear,
+  subDays,
+} from "date-fns"
+import { tr } from "date-fns/locale"
+import { AnimatePresence, motion } from "framer-motion"
+import { Bell, CheckCircle, Clock, Maximize2, Minimize2 } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+
+import { AddNoteDialog } from "./add-note-dialog"
+import { NotificationBell } from "./notification-bell"
 
 const HOUR_WIDTH = 100
 const MINUTE_MARK_HEIGHT = 10
@@ -48,22 +57,25 @@ export function Timeline() {
     const now = new Date()
     const datesArray = []
     const startDate = subDays(now, 180)
-    
+
     for (let i = 0; i < 365; i++) {
       datesArray.push(addDays(startDate, i))
     }
-    
+
     setDates(datesArray)
-    
+
     // Bugünün konumuna git
     const todayIndex = datesArray.findIndex(
-      date => startOfDay(date).getTime() === startOfDay(now).getTime()
+      (date) => startOfDay(date).getTime() === startOfDay(now).getTime()
     )
-    setPosition({ x: -(todayIndex * cellWidth) + (window.innerWidth / 2) - (cellWidth / 2), y: 0 })
+    setPosition({
+      x: -(todayIndex * cellWidth) + window.innerWidth / 2 - cellWidth / 2,
+      y: 0,
+    })
   }, [])
 
   const calculatePosition = (index: number) => {
-    return -(index * cellWidth) + (window.innerWidth / 2) - (cellWidth / 2)
+    return -(index * cellWidth) + window.innerWidth / 2 - cellWidth / 2
   }
 
   const getClampedPosition = (pos: number) => {
@@ -76,16 +88,17 @@ export function Timeline() {
     if (searchResults.length > 0) {
       const firstResult = searchResults[0]
       const resultIndex = dates.findIndex(
-        date => startOfDay(date).getTime() === startOfDay(firstResult.date).getTime()
+        (date) =>
+          startOfDay(date).getTime() === startOfDay(firstResult.date).getTime()
       )
-      
+
       if (resultIndex !== -1) {
         const newPosition = calculatePosition(resultIndex)
-        
+
         // Pozisyonu güncelle ve sınırlar içinde tut
-        setPosition({ 
-          x: getClampedPosition(newPosition), 
-          y: 0 
+        setPosition({
+          x: getClampedPosition(newPosition),
+          y: 0,
         })
       }
     }
@@ -95,102 +108,113 @@ export function Timeline() {
     const handleResize = () => {
       const newCellWidth = Math.min(window.innerWidth * 0.7, 600)
       setCellWidth(newCellWidth)
-      
+
       // Eğer arama sonucu varsa, o pozisyona git
       if (searchResults.length > 0) {
         const resultIndex = dates.findIndex(
-          date => startOfDay(date).getTime() === startOfDay(searchResults[0].date).getTime()
+          (date) =>
+            startOfDay(date).getTime() ===
+            startOfDay(searchResults[0].date).getTime()
         )
         if (resultIndex !== -1) {
           const newPosition = calculatePosition(resultIndex)
-          setPosition({ 
-            x: getClampedPosition(newPosition), 
-            y: 0 
+          setPosition({
+            x: getClampedPosition(newPosition),
+            y: 0,
           })
         }
       } else {
         // Yoksa bugünün pozisyonuna git
         const todayIndex = dates.findIndex(
-          date => startOfDay(date).getTime() === startOfDay(new Date()).getTime()
+          (date) =>
+            startOfDay(date).getTime() === startOfDay(new Date()).getTime()
         )
         if (todayIndex !== -1) {
           const newPosition = calculatePosition(todayIndex)
-          setPosition({ 
-            x: getClampedPosition(newPosition), 
-            y: 0 
+          setPosition({
+            x: getClampedPosition(newPosition),
+            y: 0,
           })
         }
       }
     }
 
     handleResize()
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
   }, [dates, searchResults])
 
-  const bind = useGesture({
-    onDrag: ({ movement: [mx], first, memo }) => {
-      if (first) return [position.x]
-      const newPosition = getClampedPosition(mx + memo[0])
-      setPosition({ x: newPosition, y: 0 })
-      return memo
+  const bind = useGesture(
+    {
+      onDrag: ({ movement: [mx], first, memo }) => {
+        if (first) return [position.x]
+        const newPosition = getClampedPosition(mx + memo[0])
+        setPosition({ x: newPosition, y: 0 })
+        return memo
+      },
+      onWheel: ({ delta: [dx] }) => {
+        const newPosition = getClampedPosition(position.x - dx)
+        setPosition({ x: newPosition, y: 0 })
+      },
     },
-    onWheel: ({ delta: [dx] }) => {
-      const newPosition = getClampedPosition(position.x - dx)
-      setPosition({ x: newPosition, y: 0 })
+    {
+      drag: { axis: "x" },
+      wheel: { axis: "x" },
     }
-  }, {
-    drag: { axis: "x" },
-    wheel: { axis: "x" }
-  })
+  )
 
   const handleSearch = (value: string) => {
-    setSearchQuery(value);
-    
+    setSearchQuery(value)
+
     // Tarih formatını kontrol et (DD.MM.YYYY veya DD/MM/YYYY)
-    const datePattern = /^(\d{2})[./](\d{2})[./](\d{4})$/;
-    const match = value.match(datePattern);
-    
+    const datePattern = /^(\d{2})[./](\d{2})[./](\d{4})$/
+    const match = value.match(datePattern)
+
     if (match) {
-      const [_, day, month, year] = match;
-      const searchDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      
+      const [_, day, month, year] = match
+      const searchDate = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day)
+      )
+
       // Tarihe göre notları filtrele
-      const filteredNotes = notes.filter(note => {
-        const noteDate = new Date(note.date);
+      const filteredNotes = notes.filter((note) => {
+        const noteDate = new Date(note.date)
         return (
           noteDate.getDate() === searchDate.getDate() &&
           noteDate.getMonth() === searchDate.getMonth() &&
           noteDate.getFullYear() === searchDate.getFullYear()
-        );
-      });
-      
+        )
+      })
+
       if (filteredNotes.length > 0) {
-        setSearchResults(filteredNotes);
-        
+        setSearchResults(filteredNotes)
+
         // İlgili tarihe git
-        const resultIndex = dates.findIndex(date => 
-          startOfDay(date).getTime() === startOfDay(searchDate).getTime()
-        );
-        
+        const resultIndex = dates.findIndex(
+          (date) =>
+            startOfDay(date).getTime() === startOfDay(searchDate).getTime()
+        )
+
         if (resultIndex !== -1) {
-          const newPosition = calculatePosition(resultIndex);
-          setPosition({ 
-            x: getClampedPosition(newPosition), 
-            y: 0 
-          });
+          const newPosition = calculatePosition(resultIndex)
+          setPosition({
+            x: getClampedPosition(newPosition),
+            y: 0,
+          })
         }
       } else {
-        setSearchResults([]);
+        setSearchResults([])
       }
     } else {
       // Normal metin araması
-      searchNotes(value);
+      searchNotes(value)
     }
-  };
+  }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="flex h-full flex-col">
       {isMinimized ? (
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
@@ -212,9 +236,9 @@ export function Timeline() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          className="h-full flex flex-col"
+          className="flex h-full flex-col"
         >
-          <div className="flex items-center justify-between py-2 px-2 bg-background/50 backdrop-blur-sm border-b">
+          <div className="flex items-center justify-between border-b bg-background/50 px-2 py-2 backdrop-blur-sm">
             <div className="flex items-center gap-2">
               <NotificationBell />
               <Button
@@ -232,15 +256,15 @@ export function Timeline() {
                 placeholder="Tarih (gg/aa/yyyy) veya kelime ile ara..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="w-[300px] h-9"
+                className="h-9 w-[300px]"
               />
               <AddNoteDialog />
             </div>
           </div>
-          
-          <div 
+
+          <div
             ref={containerRef}
-            className="flex-1 relative bg-white overflow-hidden"
+            className="relative flex-1 overflow-hidden bg-white"
             {...bind()}
           >
             <motion.div
@@ -248,62 +272,79 @@ export function Timeline() {
               className="absolute inset-0 flex"
             >
               {dates.map((date, index) => (
-                <div 
+                <div
                   key={index}
-                  className={`relative flex-shrink-0 border-r h-full ${
-                    startOfDay(date).getTime() === startOfDay(new Date()).getTime()
+                  className={`relative h-full flex-shrink-0 border-r ${
+                    startOfDay(date).getTime() ===
+                    startOfDay(new Date()).getTime()
                       ? "bg-primary/5"
                       : ""
                   }`}
                   style={{ width: cellWidth }}
                 >
-                  <div className="p-4 h-[calc(100%-40px)] overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
-                    <div className="grid grid-cols-2 gap-2 auto-rows-[120px]">
+                  <div className="scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent h-[calc(100%-40px)] overflow-y-auto p-4">
+                    <div className="grid auto-rows-[120px] grid-cols-2 gap-2">
                       {notes
-                        .filter(note => startOfDay(new Date(note.date)).getTime() === startOfDay(date).getTime())
-                        .map(note => (
-                          <Card 
-                            key={note.id} 
+                        .filter(
+                          (note) =>
+                            startOfDay(new Date(note.date)).getTime() ===
+                            startOfDay(date).getTime()
+                        )
+                        .map((note) => (
+                          <Card
+                            key={note.id}
                             className={cn(
-                              "hover:shadow-md transition-shadow h-full",
+                              "h-full transition-shadow hover:shadow-md",
                               note.status === "overdue" && "border-red-500",
                               note.status === "completed" && "opacity-75",
-                              searchResults.some(r => r.id === note.id) && "ring-2 ring-primary"
+                              searchResults.some((r) => r.id === note.id) &&
+                                "ring-2 ring-primary"
                             )}
                           >
-                            <div className="p-2 h-full flex flex-col">
-                              <div className="flex items-center justify-between mb-1">
+                            <div className="flex h-full flex-col p-2">
+                              <div className="mb-1 flex items-center justify-between">
                                 <div className="flex items-center gap-1">
-                                  <h4 className="font-medium text-sm truncate">{note.title}</h4>
+                                  <h4 className="truncate text-sm font-medium">
+                                    {note.title}
+                                  </h4>
                                   {note.reminder && (
-                                    <Bell className="w-3 h-3 text-blue-500" />
+                                    <Bell className="h-3 w-3 text-blue-500" />
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <span className={cn(
-                                    "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                                    note.priority === "high" ? "bg-red-100 text-red-800" :
-                                    note.priority === "medium" ? "bg-yellow-100 text-yellow-800" :
-                                    "bg-green-100 text-green-800"
-                                  )}>
-                                    {note.priority === "high" ? "Yüksek" :
-                                     note.priority === "medium" ? "Orta" :
-                                     "Düşük"}
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                                      note.priority === "high"
+                                        ? "bg-red-100 text-red-800"
+                                        : note.priority === "medium"
+                                          ? "bg-yellow-100 text-yellow-800"
+                                          : "bg-green-100 text-green-800"
+                                    )}
+                                  >
+                                    {note.priority === "high"
+                                      ? "Yüksek"
+                                      : note.priority === "medium"
+                                        ? "Orta"
+                                        : "Düşük"}
                                   </span>
                                   {note.status === "completed" && (
-                                    <CheckCircle className="w-3 h-3 text-green-500" />
+                                    <CheckCircle className="h-3 w-3 text-green-500" />
                                   )}
                                 </div>
                               </div>
-                              <p className="text-xs text-muted-foreground line-clamp-2 flex-1">{note.content}</p>
+                              <p className="line-clamp-2 flex-1 text-xs text-muted-foreground">
+                                {note.content}
+                              </p>
                               {note.dueDate && (
-                                <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
+                                <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
                                   {format(
-                                    note.dueDate, 
-                                    note.dueDate.getHours() === 23 && note.dueDate.getMinutes() === 59 
-                                      ? "d MMM" 
-                                      : "d MMM HH:mm", 
+                                    note.dueDate,
+                                    note.dueDate.getHours() === 23 &&
+                                      note.dueDate.getMinutes() === 59
+                                      ? "d MMM"
+                                      : "d MMM HH:mm",
                                     { locale: tr }
                                   )}
                                 </div>
@@ -314,7 +355,7 @@ export function Timeline() {
                     </div>
                   </div>
 
-                  <div className="absolute bottom-0 left-0 w-full p-2 border-t bg-background/50 backdrop-blur-sm">
+                  <div className="absolute bottom-0 left-0 w-full border-t bg-background/50 p-2 backdrop-blur-sm">
                     <div className="flex items-center justify-center gap-2">
                       <span className="text-sm font-medium">
                         {format(date, "d MMM", { locale: tr })}

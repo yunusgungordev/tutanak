@@ -1,16 +1,20 @@
 import { useRef, useState } from "react"
+import { invoke } from "@tauri-apps/api/tauri"
+import { ArrowRight, FileDown, Plus, Trash2, Upload } from "lucide-react"
+import * as XLSX from "xlsx"
+
 import { Button } from "@/components/ui/button"
-import { FileDown, Plus, Upload, Trash2, ArrowRight } from "lucide-react"
-import * as XLSX from 'xlsx'
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import { invoke } from '@tauri-apps/api/tauri';
 
 export function TaskList() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null)
   const [activeSheet, setActiveSheet] = useState<XLSX.WorkSheet | null>(null)
   const [excelData, setExcelData] = useState<any[][]>([])
-  const [editingCell, setEditingCell] = useState<{row: number, col: number} | null>(null)
+  const [editingCell, setEditingCell] = useState<{
+    row: number
+    col: number
+  } | null>(null)
   const [editingHeader, setEditingHeader] = useState<number | null>(null)
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,13 +24,15 @@ export function TaskList() {
     const reader = new FileReader()
     reader.onload = (event) => {
       const data = event.target?.result
-      const wb = XLSX.read(data, { type: 'binary' })
+      const wb = XLSX.read(data, { type: "binary" })
       setWorkbook(wb)
-      
+
       const firstSheet = wb.Sheets[wb.SheetNames[0]]
       setActiveSheet(firstSheet)
-      
-      const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][]
+
+      const jsonData = XLSX.utils.sheet_to_json(firstSheet, {
+        header: 1,
+      }) as any[][]
       setExcelData(jsonData)
     }
     reader.readAsBinaryString(file)
@@ -37,7 +43,11 @@ export function TaskList() {
     XLSX.writeFile(workbook, "gorev-listesi.xlsx")
   }
 
-  const handleCellEdit = (value: string, rowIndex: number, colIndex: number) => {
+  const handleCellEdit = (
+    value: string,
+    rowIndex: number,
+    colIndex: number
+  ) => {
     const newData = [...excelData]
     newData[rowIndex][colIndex] = value
     setExcelData(newData)
@@ -90,7 +100,7 @@ export function TaskList() {
   }
 
   const addNewColumn = () => {
-    const newData = excelData.map(row => [...row, ""])
+    const newData = excelData.map((row) => [...row, ""])
     if (newData.length === 0) {
       newData.push([""])
     }
@@ -107,20 +117,20 @@ export function TaskList() {
   const saveToDatabase = async () => {
     if (workbook && activeSheet) {
       try {
-        const jsonData = JSON.stringify(excelData);
-        await invoke('save_excel_data', { 
+        const jsonData = JSON.stringify(excelData)
+        await invoke("save_excel_data", {
           data: jsonData,
-          sheet_name: workbook.SheetNames[0] 
-        });
+          sheet_name: workbook.SheetNames[0],
+        })
       } catch (error) {
-        console.error('Veritabanı kayıt hatası:', error);
+        console.error("Veritabanı kayıt hatası:", error)
       }
     }
-  };
+  }
 
   return (
     <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-bold">Görev Listesi</h2>
         <div className="flex gap-2">
           <input
@@ -130,25 +140,25 @@ export function TaskList() {
             accept=".xlsx,.xls"
             className="hidden"
           />
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
           >
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="mr-2 h-4 w-4" />
             Excel Yükle
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             onClick={handleExportExcel}
             disabled={!workbook}
           >
-            <FileDown className="w-4 h-4 mr-2" />
+            <FileDown className="mr-2 h-4 w-4" />
             Excel'e Aktar
           </Button>
-          <Button 
-            variant="default" 
+          <Button
+            variant="default"
             size="sm"
             onClick={() => {
               const wb = XLSX.utils.book_new()
@@ -159,13 +169,13 @@ export function TaskList() {
               setExcelData([[]])
             }}
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Yeni Liste
           </Button>
         </div>
       </div>
-      
-      <ScrollArea className="border rounded-lg">
+
+      <ScrollArea className="rounded-lg border">
         <div className="min-w-max">
           {excelData.length > 0 ? (
             <div>
@@ -174,9 +184,9 @@ export function TaskList() {
                   {excelData.map((row, rowIndex) => (
                     <tr key={rowIndex} className="border-b">
                       {row.map((cell: any, colIndex: number) => (
-                        <td 
+                        <td
                           key={colIndex}
-                          className={`p-2 border-r min-w-[150px] ${rowIndex === 0 ? 'font-bold bg-muted/50' : ''}`}
+                          className={`min-w-[150px] border-r p-2 ${rowIndex === 0 ? "bg-muted/50 font-bold" : ""}`}
                           onClick={() => {
                             if (rowIndex === 0) {
                               setEditingHeader(colIndex)
@@ -189,19 +199,28 @@ export function TaskList() {
                             <input
                               type="text"
                               value={cell || ""}
-                              onChange={(e) => handleHeaderEdit(e.target.value, colIndex)}
+                              onChange={(e) =>
+                                handleHeaderEdit(e.target.value, colIndex)
+                              }
                               onBlur={() => setEditingHeader(null)}
                               autoFocus
-                              className="w-full p-1 border rounded font-bold"
+                              className="w-full rounded border p-1 font-bold"
                             />
-                          ) : editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
+                          ) : editingCell?.row === rowIndex &&
+                            editingCell?.col === colIndex ? (
                             <input
                               type="text"
                               value={cell || ""}
-                              onChange={(e) => handleCellEdit(e.target.value, rowIndex, colIndex)}
+                              onChange={(e) =>
+                                handleCellEdit(
+                                  e.target.value,
+                                  rowIndex,
+                                  colIndex
+                                )
+                              }
                               onBlur={() => setEditingCell(null)}
                               autoFocus
-                              className="w-full p-1 border rounded"
+                              className="w-full rounded border p-1"
                             />
                           ) : (
                             cell
@@ -209,26 +228,26 @@ export function TaskList() {
                         </td>
                       ))}
                       {rowIndex === 0 && (
-                        <td className="p-2 w-16 bg-muted/50">
+                        <td className="w-16 bg-muted/50 p-2">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={addNewColumn}
                             className="h-6 w-6 p-0"
                           >
-                            <ArrowRight className="w-4 h-4" />
+                            <ArrowRight className="h-4 w-4" />
                           </Button>
                         </td>
                       )}
                       {rowIndex !== 0 && (
-                        <td className="p-2 w-16">
+                        <td className="w-16 p-2">
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => deleteRow(rowIndex)}
                             className="h-6 w-6 p-0"
                           >
-                            <Trash2 className="w-4 h-4 text-red-500" />
+                            <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
                         </td>
                       )}
@@ -243,7 +262,7 @@ export function TaskList() {
                   onClick={addNewRow}
                   className="w-full"
                 >
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="mr-2 h-4 w-4" />
                   Yeni Satır Ekle
                 </Button>
               </div>

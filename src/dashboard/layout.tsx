@@ -1,21 +1,22 @@
-import React from 'react';
-import { useTabContext } from "@/contexts/tab-context";
-import { Button } from "@/components/ui/button";
-import { Layout as LayoutIcon, Plus } from "lucide-react";
-import { CreateTabDialog } from "@/dashboard/components/create-tab-dialog";
-import { cn } from "@/lib/utils";
+import React from "react"
+import { useTabContext } from "@/contexts/tab-context"
+import { CreateTabDialog } from "@/dashboard/components/create-tab-dialog"
+import { Layout as LayoutIcon, Plus } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 export function DashboardLayout() {
-  const { tabs, activeTab, setActiveTab } = useTabContext();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
+  const { tabs, activeTab, setActiveTab } = useTabContext()
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false)
 
   return (
     <div className="dashboard-layout">
       <div className="sidebar">
-        <div className="flex flex-col h-full">
+        <div className="flex h-full flex-col">
           <div className="sidebar-header">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full justify-start gap-2"
               onClick={() => setIsCreateDialogOpen(true)}
             >
@@ -23,7 +24,7 @@ export function DashboardLayout() {
               <span>Yeni Tab</span>
             </Button>
           </div>
-          
+
           <div className="sidebar-content">
             {tabs.map((tab) => (
               <button
@@ -42,16 +43,16 @@ export function DashboardLayout() {
         </div>
       </div>
 
-      <div className="flex-1 relative overflow-hidden bg-background">
+      <div className="relative flex-1 overflow-hidden bg-background">
         <div className="absolute inset-0 overflow-auto">
           {activeTab && <activeTab.component label={activeTab.label} />}
         </div>
       </div>
 
-      <CreateTabDialog 
-        open={isCreateDialogOpen} 
-        onOpenChange={setIsCreateDialogOpen} 
+      <CreateTabDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
       />
     </div>
-  );
-} 
+  )
+}

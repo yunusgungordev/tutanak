@@ -15,12 +15,12 @@ export function Menu() {
         controlsOrder="platform"
         windowControlsProps={{
           platform: "windows",
-          style: { 
-            height: '32px'
-          }
+          style: {
+            height: "32px",
+          },
         }}
       >
-        <div className="h-8 w-full flex items-center px-2 bg-background">
+        <div className="flex h-8 w-full items-center bg-background px-2">
           <span className="text-sm font-medium">Tutanak</span>
         </div>
       </WindowTitlebar>

@@ -1,13 +1,13 @@
-import { Button } from "@/components/ui/button"
-import { Timeline } from "@/dashboard/components/timeline"
+import React, { useState } from "react"
 import { NotesProvider } from "@/contexts/notes-context"
-import { TabBar } from "@/dashboard/components/tab-bar"
-import { useState } from "react"
 import { TabProvider, useTabContext } from "@/contexts/tab-context"
-import React from "react"
-import { Pencil, Trash2 } from 'lucide-react'
 import { useTimeline } from "@/contexts/timeline-context"
+import { TabBar } from "@/dashboard/components/tab-bar"
+import { Timeline } from "@/dashboard/components/timeline"
+import { Pencil, Trash2 } from "lucide-react"
+
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 interface Tab {
   id: string
@@ -17,7 +17,7 @@ interface Tab {
 export default function DashboardPage() {
   const [tabs, setTabs] = useState<Tab[]>([])
   const [editingTabId, setEditingTabId] = useState<string | null>(null)
-  const [editingTabName, setEditingTabName] = useState('')
+  const [editingTabName, setEditingTabName] = useState("")
   const { isMinimized } = useTimeline()
 
   const handleEditTab = (tab: Tab) => {
@@ -28,30 +28,30 @@ export default function DashboardPage() {
   const handleUpdateTab = () => {
     if (!editingTabName.trim()) return
 
-    setTabs(prevTabs =>
-      prevTabs.map(tab =>
-        tab.id === editingTabId
-          ? { ...tab, name: editingTabName.trim() }
-          : tab
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) =>
+        tab.id === editingTabId ? { ...tab, name: editingTabName.trim() } : tab
       )
     )
     setEditingTabId(null)
-    setEditingTabName('')
+    setEditingTabName("")
   }
 
   const handleDeleteTab = (tabId: string) => {
-    setTabs(prevTabs => prevTabs.filter(tab => tab.id !== tabId))
+    setTabs((prevTabs) => prevTabs.filter((tab) => tab.id !== tabId))
   }
 
   return (
     <TabProvider>
       <NotesProvider>
-        <div className="flex flex-col h-screen p-2">
-          <div className="flex-1 flex flex-col bg-background">
-            <div className={cn(
-              "transition-all duration-300",
-              isMinimized ? "h-[calc(100vh-74px)]" : "h-[calc(50vh)]"
-            )}>
+        <div className="flex h-screen flex-col p-2">
+          <div className="flex flex-1 flex-col bg-background">
+            <div
+              className={cn(
+                "transition-all duration-300",
+                isMinimized ? "h-[calc(100vh-74px)]" : "h-[calc(50vh)]"
+              )}
+            >
               <div className="h-full overflow-hidden">
                 <div className="flex h-full">
                   <div className="w-48 shrink-0">
@@ -59,7 +59,7 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="flex-1 overflow-x-auto">
-                    <div className="min-w-[1000px] h-full">
+                    <div className="h-full min-w-[1000px]">
                       <TabContent />
                     </div>
                   </div>
@@ -67,10 +67,12 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className={cn(
-              "transition-all duration-300 overflow-hidden",
-              isMinimized ? "h-12" : "h-[calc(50vh-20px)]"
-            )}>
+            <div
+              className={cn(
+                "overflow-hidden transition-all duration-300",
+                isMinimized ? "h-12" : "h-[calc(50vh-20px)]"
+              )}
+            >
               <Timeline />
             </div>
           </div>
@@ -88,7 +90,7 @@ function TabContent() {
     fields: activeTab.fields,
     database: activeTab.database,
     id: activeTab.id,
-    type: activeTab.type
+    type: activeTab.type,
   }
   return React.createElement(activeTab.component, props)
 }

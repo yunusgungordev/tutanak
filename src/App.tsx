@@ -1,5 +1,5 @@
-import DashboardPage from "@/dashboard/page"
 import { TimelineProvider } from "@/contexts/timeline-context"
+import DashboardPage from "@/dashboard/page"
 
 function App() {
   return (

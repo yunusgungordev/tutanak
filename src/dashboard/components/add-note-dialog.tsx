@@ -1,5 +1,11 @@
 import { useState } from "react"
+import { useNotes } from "@/contexts/notes-context"
+import { invoke } from "@tauri-apps/api/tauri"
+import { format } from "date-fns"
+import { tr } from "date-fns/locale"
+
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import {
   Dialog,
   DialogContent,
@@ -8,19 +14,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
-import { format } from "date-fns"
-import { tr } from "date-fns/locale"
-import { useNotes } from "@/contexts/notes-context"
-import { invoke } from "@tauri-apps/api/tauri"
+import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 
 export function AddNoteDialog() {
@@ -37,19 +38,24 @@ export function AddNoteDialog() {
   const handleSubmit = async () => {
     try {
       if (!title?.trim()) {
-        setError("Başlık alanı zorunludur");
-        return;
+        setError("Başlık alanı zorunludur")
+        return
       }
 
       if (!content?.trim()) {
-        setError("İçerik alanı zorunludur");
-        return;
+        setError("İçerik alanı zorunludur")
+        return
       }
 
-      const dueDate = time ? 
-        new Date(date.getFullYear(), date.getMonth(), date.getDate(), 
-          parseInt(time.split(':')[0]), parseInt(time.split(':')[1])) : 
-        new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59);
+      const dueDate = time
+        ? new Date(
+            date.getFullYear(),
+            date.getMonth(),
+            date.getDate(),
+            parseInt(time.split(":")[0]),
+            parseInt(time.split(":")[1])
+          )
+        : new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59)
 
       const note = {
         title: title.trim(),
@@ -58,63 +64,68 @@ export function AddNoteDialog() {
         date,
         dueDate,
         reminder,
-        lastNotified: undefined
-      };
+        lastNotified: undefined,
+      }
 
-      await addNote(note);
-      
+      await addNote(note)
+
       // Form alanlarını temizle
-      setTitle('');
-      setContent('');
-      setPriority('low');
-      setDate(new Date());
-      setTime('');
-      setError('');
-      
-      setOpen(false);
-      
+      setTitle("")
+      setContent("")
+      setPriority("low")
+      setDate(new Date())
+      setTime("")
+      setError("")
+
+      setOpen(false)
+
       toast({
         title: "Not başarıyla kaydedildi",
         variant: "default",
-      });
+      })
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Not kaydedilirken bir hata oluştu';
-      setError(errorMessage);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Not kaydedilirken bir hata oluştu"
+      setError(errorMessage)
       toast({
         title: errorMessage,
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="default" size="sm">Not Ekle</Button>
+        <Button variant="default" size="sm">
+          Not Ekle
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Yeni Not</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-4">
           {error && (
-            <div className="text-sm text-red-500 font-medium">
-              {error}
-            </div>
+            <div className="text-sm font-medium text-red-500">{error}</div>
           )}
-          <Input 
-            placeholder="Başlık" 
+          <Input
+            placeholder="Başlık"
             value={title}
-            onChange={e => setTitle(e.target.value)}
+            onChange={(e) => setTitle(e.target.value)}
           />
-          <Textarea 
-            placeholder="Not içeriği" 
+          <Textarea
+            placeholder="Not içeriği"
             value={content}
-            onChange={e => setContent(e.target.value)}
+            onChange={(e) => setContent(e.target.value)}
           />
-          <Select 
-            value={priority} 
-            onValueChange={(value: "low" | "medium" | "high") => setPriority(value)}
+          <Select
+            value={priority}
+            onValueChange={(value: "low" | "medium" | "high") =>
+              setPriority(value)
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Öncelik" />
@@ -125,23 +136,25 @@ export function AddNoteDialog() {
               <SelectItem value="high">Yüksek Öncelik</SelectItem>
             </SelectContent>
           </Select>
-          <div className="flex flex-col gap-2 items-center">
+          <div className="flex flex-col items-center gap-2">
             <label>Tarih ve Saat</label>
             <Calendar
               mode="single"
               selected={date}
-              onSelect={(selectedDate: Date | undefined) => selectedDate && setDate(selectedDate)}
+              onSelect={(selectedDate: Date | undefined) =>
+                selectedDate && setDate(selectedDate)
+              }
               locale={tr}
             />
-            <Input 
-              type="time" 
+            <Input
+              type="time"
               className="mt-2"
               value={time}
-              onChange={e => setTime(e.target.value)}
+              onChange={(e) => setTime(e.target.value)}
             />
           </div>
-          <Button 
-            className="w-full" 
+          <Button
+            className="w-full"
             onClick={handleSubmit}
             disabled={!title || !content || !priority || !date}
           >
@@ -151,4 +164,4 @@ export function AddNoteDialog() {
       </DialogContent>
     </Dialog>
   )
-} 
+}

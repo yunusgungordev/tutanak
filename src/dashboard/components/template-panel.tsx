@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react"
 import { invoke } from "@tauri-apps/api/tauri"
-import { Card } from "@/components/ui/card"
-import { FileText, Plus, Trash2, Search } from "lucide-react"
+import { FileText, Plus, Search, Trash2 } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Card } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 
@@ -23,14 +32,17 @@ interface TemplatePanelProps {
   activeTemplateId?: string
 }
 
-export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePanelProps) {
+export function TemplatePanel({
+  onTemplateClick,
+  activeTemplateId,
+}: TemplatePanelProps) {
   const [templates, setTemplates] = useState<Template[]>([])
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [newTemplate, setNewTemplate] = useState<Partial<Template>>({
     title: "",
     description: "",
     note: "",
-    template_type: "tutanak"
+    template_type: "tutanak",
   })
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [templateToDelete, setTemplateToDelete] = useState<number | undefined>()
@@ -42,20 +54,24 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
   }, [])
 
   useEffect(() => {
-    const filtered = templates.filter(template => 
-      template.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      template.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (template.note && template.note.toLowerCase().includes(searchQuery.toLowerCase()))
+    const filtered = templates.filter(
+      (template) =>
+        template.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        template.description
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        (template.note &&
+          template.note.toLowerCase().includes(searchQuery.toLowerCase()))
     )
     setFilteredTemplates(filtered)
   }, [searchQuery, templates])
 
   const loadTemplates = async () => {
     try {
-      const dbTemplates = await invoke<Template[]>('get_templates')
+      const dbTemplates = await invoke<Template[]>("get_templates")
       setTemplates(dbTemplates)
     } catch (error) {
-      console.error('Template yükleme hatası:', error)
+      console.error("Template yükleme hatası:", error)
     }
   }
 
@@ -64,20 +80,20 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
       const templateData = {
         ...newTemplate,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       }
 
-      await invoke('save_template', { template: templateData })
+      await invoke("save_template", { template: templateData })
       setIsAddDialogOpen(false)
       setNewTemplate({
         title: "",
         description: "",
         note: "",
-        template_type: "tutanak"
+        template_type: "tutanak",
       })
       await loadTemplates()
     } catch (error) {
-      console.error('Template kaydetme hatası:', error)
+      console.error("Template kaydetme hatası:", error)
     }
   }
 
@@ -87,14 +103,14 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
   }
 
   const confirmDelete = async () => {
-    if (!templateToDelete) return;
-    
+    if (!templateToDelete) return
+
     try {
-      await invoke('delete_template', { id: templateToDelete });
-      await loadTemplates();
+      await invoke("delete_template", { id: templateToDelete })
+      await loadTemplates()
       setDeleteConfirmOpen(false)
     } catch (error) {
-      console.error('Template silme hatası:', error);
+      console.error("Template silme hatası:", error)
     }
   }
 
@@ -103,15 +119,15 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
   }
 
   return (
-    <div className="w-80 h-full flex flex-col border-r bg-card/50 backdrop-blur-sm">
+    <div className="flex h-full w-80 flex-col border-r bg-card/50 backdrop-blur-sm">
       <div className="search-container">
         <div className="flex items-center gap-2">
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Cümle ara..."
-              className="h-9 text-sm bg-background/50 pl-9"
+              className="h-9 bg-background/50 pl-9 text-sm"
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
             />
@@ -135,7 +151,12 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
                   <Input
                     placeholder="Başlık giriniz"
                     value={newTemplate.title}
-                    onChange={e => setNewTemplate(prev => ({ ...prev, title: e.target.value }))}
+                    onChange={(e) =>
+                      setNewTemplate((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -143,7 +164,12 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
                   <Textarea
                     placeholder="Açıklama giriniz"
                     value={newTemplate.description}
-                    onChange={e => setNewTemplate(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) =>
+                      setNewTemplate((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
                     rows={3}
                   />
                 </div>
@@ -152,45 +178,51 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
                   <Textarea
                     placeholder="Not ekleyin"
                     value={newTemplate.note}
-                    onChange={e => setNewTemplate(prev => ({ ...prev, note: e.target.value }))}
+                    onChange={(e) =>
+                      setNewTemplate((prev) => ({
+                        ...prev,
+                        note: e.target.value,
+                      }))
+                    }
                     rows={2}
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                >
                   İptal
                 </Button>
-                <Button onClick={handleSaveTemplate}>
-                  Kaydet
-                </Button>
+                <Button onClick={handleSaveTemplate}>Kaydet</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </div>
       </div>
-      
+
       <div className="flex-1 overflow-auto px-2">
         <div className="space-y-2 py-2">
-          {filteredTemplates.map(template => (
+          {filteredTemplates.map((template) => (
             <div
               key={template.id}
               onClick={() => onTemplateClick(template)}
               className={cn(
-                "group template-card",
+                "template-card group",
                 activeTemplateId === template.id && "template-card-active"
               )}
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-foreground truncate">
+                <div className="min-w-0 flex-1">
+                  <h4 className="truncate font-medium text-foreground">
                     {template.title}
                   </h4>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                     {template.description}
                   </p>
                   {template.note && (
-                    <div className="mt-2 text-xs text-muted-foreground/80 bg-muted/50 rounded p-1.5">
+                    <div className="mt-2 rounded bg-muted/50 p-1.5 text-xs text-muted-foreground/80">
                       {template.note}
                     </div>
                   )}
@@ -198,10 +230,10 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-8 w-8 p-0 opacity-0 transition-opacity group-hover:opacity-100"
                   onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteTemplate(template.id);
+                    e.stopPropagation()
+                    handleDeleteTemplate(template.id)
                   }}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
@@ -224,14 +256,11 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
             <Button
               variant="outline"
               onClick={() => setDeleteConfirmOpen(false)}
-              className="bg-white hover:bg-gray-50 text-gray-800"
+              className="bg-white text-gray-800 hover:bg-gray-50"
             >
               İptal
             </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-            >
+            <Button variant="destructive" onClick={confirmDelete}>
               Sil
             </Button>
           </div>
@@ -239,4 +268,4 @@ export function TemplatePanel({ onTemplateClick, activeTemplateId }: TemplatePan
       </Dialog>
     </div>
   )
-} 
+}

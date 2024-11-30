@@ -1,4 +1,5 @@
 import { ComponentType } from "react"
+
 import { ComponentProperties } from "./component"
 
 export type TabContent = {
@@ -13,19 +14,19 @@ export type TabContent = {
     table_name: string
     fields: Field[]
   }
-} 
+}
 
 export interface DynamicTabConfig {
-  id: string;
-  label: string;
-  type: string;
-  layout: LayoutConfig[];
-  fields: Field[];
+  id: string
+  label: string
+  type: string
+  layout: LayoutConfig[]
+  fields: Field[]
   database: {
-    table_name: string;
-    fields: Field[];
-  };
-  created_at?: string;
+    table_name: string
+    fields: Field[]
+  }
+  created_at?: string
 }
 
 export interface LayoutConfig {
@@ -36,6 +37,6 @@ export interface LayoutConfig {
 }
 
 export interface Field {
-  name: string;
-  type: string;
+  name: string
+  type: string
 }

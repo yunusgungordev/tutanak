@@ -1,14 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card } from "@/components/ui/card"
-import { TemplatePanel, Template } from "./template-panel"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useEffect, useState } from "react"
 import { Plus } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+
+import { Template, TemplatePanel } from "./template-panel"
+
 export function Overview() {
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
+    null
+  )
   const [templates, setTemplates] = useState<Template[]>([])
   const [isEditing, setIsEditing] = useState(false)
   const [editedTitle, setEditedTitle] = useState("")
@@ -19,7 +23,10 @@ export function Overview() {
     if (selectedTemplate?.id === template.id) {
       setSelectedTemplate(null)
     } else {
-      setSelectedTemplate({ ...template, id: crypto.randomUUID() as unknown as number })
+      setSelectedTemplate({
+        ...template,
+        id: crypto.randomUUID() as unknown as number,
+      })
       setEditedTitle(template.title)
       setEditedDescription(template.description)
       setEditedNote(template.note || "")
@@ -36,7 +43,7 @@ export function Overview() {
         ...selectedTemplate,
         title: editedTitle,
         description: editedDescription,
-        note: editedNote
+        note: editedNote,
       })
       setIsEditing(false)
     }
@@ -47,12 +54,12 @@ export function Overview() {
   }
 
   const handleAddTemplate = () => {
-    setSelectedTemplate({ 
+    setSelectedTemplate({
       id: crypto.randomUUID() as unknown as number,
       title: "",
       description: "",
       note: "",
-      template_type: "tutanak"
+      template_type: "tutanak",
     })
     setIsEditing(true)
   }
@@ -60,20 +67,22 @@ export function Overview() {
   return (
     <div className="flex h-full">
       <div className="shrink-0 p-2">
-        <TemplatePanel 
+        <TemplatePanel
           onTemplateClick={addTemplate}
           activeTemplateId={selectedTemplate?.id?.toString()}
         />
       </div>
-      
+
       <div className="flex-1">
-        <div className="h-full border-2 rounded-lg bg-muted/50 p-4">
+        <div className="h-full rounded-lg border-2 bg-muted/50 p-4">
           {!selectedTemplate ? (
-            <div className="h-full flex flex-col items-center justify-center gap-4">
-              <p className="text-lg text-muted-foreground">Sol panelden cümle seçin</p>
+            <div className="flex h-full flex-col items-center justify-center gap-4">
+              <p className="text-lg text-muted-foreground">
+                Sol panelden cümle seçin
+              </p>
             </div>
           ) : (
-            <div className="h-full flex flex-col justify-between">
+            <div className="flex h-full flex-col justify-between">
               <div className="space-y-8">
                 {isEditing ? (
                   <div className="space-y-4">
@@ -81,34 +90,30 @@ export function Overview() {
                       type="text"
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
-                      className="w-full p-2 border rounded-md text-lg font-medium"
+                      className="w-full rounded-md border p-2 text-lg font-medium"
                       placeholder="Başlık"
                     />
                     <textarea
                       value={editedDescription}
                       onChange={(e) => setEditedDescription(e.target.value)}
-                      className="w-full p-2 border rounded-md min-h-[100px] text-muted-foreground"
+                      className="min-h-[100px] w-full rounded-md border p-2 text-muted-foreground"
                       placeholder="İçerik"
                     />
                     <textarea
                       value={editedNote}
                       onChange={(e) => setEditedNote(e.target.value)}
-                      className="w-full p-2 border rounded-md min-h-[80px] text-muted-foreground"
+                      className="min-h-[80px] w-full rounded-md border p-2 text-muted-foreground"
                       placeholder="Not"
                     />
                     <div className="flex justify-end gap-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => setIsEditing(false)}
                       >
                         İptal
                       </Button>
-                      <Button 
-                        variant="default" 
-                        size="sm"
-                        onClick={handleSave}
-                      >
+                      <Button variant="default" size="sm" onClick={handleSave}>
                         Kaydet
                       </Button>
                     </div>
@@ -117,17 +122,21 @@ export function Overview() {
                   <div className="space-y-6">
                     <div className="flex flex-col gap-4">
                       <div className="flex items-start justify-between">
-                        <h3 className="text-2xl font-medium">{selectedTemplate.title}</h3>
+                        <h3 className="text-2xl font-medium">
+                          {selectedTemplate.title}
+                        </h3>
                         <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
-                            onClick={() => handleCopy(selectedTemplate.description)}
+                            onClick={() =>
+                              handleCopy(selectedTemplate.description)
+                            }
                           >
                             İçeriği Kopyala
                           </Button>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={handleEdit}
                           >
@@ -135,16 +144,20 @@ export function Overview() {
                           </Button>
                         </div>
                       </div>
-                      <p className="text-muted-foreground text-lg">{selectedTemplate.description}</p>
+                      <p className="text-lg text-muted-foreground">
+                        {selectedTemplate.description}
+                      </p>
                     </div>
                   </div>
                 )}
               </div>
               {!isEditing && selectedTemplate.note && (
                 <div className="mt-auto pt-4">
-                  <div className="p-3 bg-muted rounded-md">
-                    <h4 className="text-sm font-medium mb-1">Not:</h4>
-                    <p className="text-sm text-muted-foreground">{selectedTemplate.note}</p>
+                  <div className="rounded-md bg-muted p-3">
+                    <h4 className="mb-1 text-sm font-medium">Not:</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedTemplate.note}
+                    </p>
                   </div>
                 </div>
               )}

@@ -11,7 +11,7 @@ const Accordion = React.forwardRef<
   <AccordionPrimitive.Root
     ref={ref}
     className={cn(
-      "bg-white/50 border border-gray-200 rounded-md shadow-md transition-all duration-300 ease-in-out",
+      "rounded-md border border-gray-200 bg-white/50 shadow-md transition-all duration-300 ease-in-out",
       className
     )}
     {...props}
@@ -39,7 +39,7 @@ const AccordionHeader = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "flex items-center justify-between p-4 cursor-pointer select-none transition-all duration-300 ease-in-out",
+        "flex cursor-pointer select-none items-center justify-between p-4 transition-all duration-300 ease-in-out",
         className
       )}
       {...props}

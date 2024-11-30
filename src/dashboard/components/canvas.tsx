@@ -1,7 +1,9 @@
 import { useRef } from "react"
+
 import { LayoutConfig } from "@/types/tab"
-import { DraggableComponent } from "./draggable-component"
 import { cn } from "@/lib/utils"
+
+import { DraggableComponent } from "./draggable-component"
 
 interface CanvasProps {
   layout: LayoutConfig[]
@@ -23,23 +25,23 @@ const gridStyle = {
     linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
   `,
-  backgroundSize: `${GRID_SNAP}px ${GRID_SNAP}px`
+  backgroundSize: `${GRID_SNAP}px ${GRID_SNAP}px`,
 }
 
 const VISIBLE_GRID = {
   width: 800,
   height: 600,
-  padding: 20
+  padding: 20,
 }
 
-export function Canvas({ 
-  layout, 
-  setLayout, 
-  selectedComponent, 
-  onSelect, 
+export function Canvas({
+  layout,
+  setLayout,
+  selectedComponent,
+  onSelect,
   renderComponentPreview,
   isDialog = false,
-  onContentUpdate 
+  onContentUpdate,
 }: CanvasProps) {
   const gridRef = useRef<HTMLDivElement>(null)
   const visibleAreaRef = useRef<HTMLDivElement>(null)
@@ -50,25 +52,28 @@ export function Canvas({
     }
   }
 
-  const maxY = Math.max(...layout.map(item => item.properties.y + item.properties.height), 600)
+  const maxY = Math.max(
+    ...layout.map((item) => item.properties.y + item.properties.height),
+    600
+  )
 
   const handleDeleteComponent = (componentId: string) => {
-    setLayout(layout.filter(item => item.id !== componentId))
+    setLayout(layout.filter((item) => item.id !== componentId))
     onSelect("") // Seçimi temizle
   }
 
   const handleContentUpdate = (updatedConfig: LayoutConfig) => {
-    const newLayout = layout.map(item =>
+    const newLayout = layout.map((item) =>
       item.id === updatedConfig.id ? updatedConfig : item
-    );
-    setLayout(newLayout);
-  };
+    )
+    setLayout(newLayout)
+  }
 
   return (
-    <div 
+    <div
       className={cn(
-        "relative bg-muted/5 rounded-lg overflow-auto",
-        isDialog ? "w-[1000px] h-[700px]" : "w-full h-full min-h-[600px]"
+        "relative overflow-auto rounded-lg bg-muted/5",
+        isDialog ? "h-[700px] w-[1000px]" : "h-full min-h-[600px] w-full"
       )}
       ref={gridRef}
       onClick={handleCanvasClick}
@@ -78,12 +83,12 @@ export function Canvas({
         className="absolute bg-background/50"
         style={{
           width: "100%",
-          minWidth: VISIBLE_GRID.width + (VISIBLE_GRID.padding * 2),
+          minWidth: VISIBLE_GRID.width + VISIBLE_GRID.padding * 2,
           height: maxY + VISIBLE_GRID.padding * 2,
           left: 0,
           top: 0,
           backgroundImage: gridStyle.backgroundImage,
-          backgroundSize: gridStyle.backgroundSize
+          backgroundSize: gridStyle.backgroundSize,
         }}
       >
         {layout.map((item) => (
@@ -100,11 +105,11 @@ export function Canvas({
             gridBounds={{
               width: VISIBLE_GRID.width,
               height: maxY,
-              padding: VISIBLE_GRID.padding
+              padding: VISIBLE_GRID.padding,
             }}
           />
         ))}
       </div>
     </div>
   )
-} 
+}

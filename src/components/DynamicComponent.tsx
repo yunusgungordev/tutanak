@@ -1,235 +1,260 @@
-import React, { useState, useEffect } from 'react';
-import { LayoutConfig, Field } from '@/types/tab';
-import { useTabContext } from "@/contexts/tab-context";
-import { toast } from "react-hot-toast";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { Button } from "@/components/ui/button"
-import { Pencil, Plus, X, Trash2 } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import React, { useEffect, useState } from "react"
+import { useTabContext } from "@/contexts/tab-context"
+import { Pencil, Plus, Trash2, X } from "lucide-react"
+import { toast } from "react-hot-toast"
+
+import { Field, LayoutConfig } from "@/types/tab"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface DynamicComponentProps {
-  config: LayoutConfig;
-  fields?: Field[];
-  onContentUpdate?: (updatedConfig: LayoutConfig) => void;
+  config: LayoutConfig
+  fields?: Field[]
+  onContentUpdate?: (updatedConfig: LayoutConfig) => void
 }
 
-export function DynamicComponent({ config, fields, onContentUpdate }: DynamicComponentProps) {
-  const { setActiveTab, tabs, updateTab, activeTab, updateLayout } = useTabContext();
-  const [isEditing, setIsEditing] = useState(false);
+export function DynamicComponent({
+  config,
+  fields,
+  onContentUpdate,
+}: DynamicComponentProps) {
+  const { setActiveTab, tabs, updateTab, activeTab, updateLayout } =
+    useTabContext()
+  const [isEditing, setIsEditing] = useState(false)
 
   const style = {
-    position: 'absolute' as const,
+    position: "absolute" as const,
     left: `${config.properties.x}px`,
     top: `${config.properties.y}px`,
     width: `${config.properties.width}px`,
     height: `${config.properties.height}px`,
-  };
+  }
 
   const handleEvent = (event: React.SyntheticEvent, eventType: string) => {
-    const events = config.properties.events || [];
-    const matchingEvents = events.filter(e => e.type === eventType);
+    const events = config.properties.events || []
+    const matchingEvents = events.filter((e) => e.type === eventType)
 
-    matchingEvents.forEach(evt => {
+    matchingEvents.forEach((evt) => {
       switch (evt.action) {
-        case 'openDialog':
+        case "openDialog":
           // Dialog açma işlemi
-          break;
-        
-        case 'showMessage':
-          toast(evt.params?.message || 'Mesaj');
-          break;
-        
-        case 'navigateTab':
-          const targetTab = tabs.find(tab => tab.id === evt.target);
+          break
+
+        case "showMessage":
+          toast(evt.params?.message || "Mesaj")
+          break
+
+        case "navigateTab":
+          const targetTab = tabs.find((tab) => tab.id === evt.target)
           if (targetTab) {
-            setActiveTab(targetTab);
+            setActiveTab(targetTab)
           }
-          break;
-        
-        case 'executeQuery':
+          break
+
+        case "executeQuery":
           // Sorgu çalıştırma işlemi
-          break;
+          break
       }
-    });
-  };
+    })
+  }
 
   const handleHeaderChange = async (index: number, value: string) => {
     if (config.type === "table" && activeTab?.layout) {
       try {
-        const updatedHeaders = [...(config.properties.headers || [])];
-        updatedHeaders[index] = value;
+        const updatedHeaders = [...(config.properties.headers || [])]
+        updatedHeaders[index] = value
 
         const updatedConfig = {
           ...config,
           properties: {
             ...config.properties,
-            headers: updatedHeaders
-          }
-        };
+            headers: updatedHeaders,
+          },
+        }
 
-        const updatedLayout = activeTab.layout.map(item =>
+        const updatedLayout = activeTab.layout.map((item) =>
           item.id === config.id ? updatedConfig : item
-        );
+        )
 
         await updateTab(activeTab.id, {
           ...activeTab,
-          layout: updatedLayout
-        });
+          layout: updatedLayout,
+        })
 
-        updateLayout(activeTab.id, updatedLayout);
+        updateLayout(activeTab.id, updatedLayout)
 
-        toast.success("Başlık güncellendi");
+        toast.success("Başlık güncellendi")
       } catch (error) {
-        toast.error("Başlık güncellenirken bir hata oluştu");
+        toast.error("Başlık güncellenirken bir hata oluştu")
       }
     }
-  };
+  }
 
-  const handleCellChange = (rowIndex: number, cellIndex: number, value: string) => {
-    const newRows = [...(config.properties.rows || [[]])];
-    newRows[rowIndex][cellIndex] = value;
-    updateTableProperty('rows', newRows);
-  };
+  const handleCellChange = (
+    rowIndex: number,
+    cellIndex: number,
+    value: string
+  ) => {
+    const newRows = [...(config.properties.rows || [[]])]
+    newRows[rowIndex][cellIndex] = value
+    updateTableProperty("rows", newRows)
+  }
 
   const addColumn = () => {
-    const newHeaders = [...(config.properties.headers || []), `Başlık ${(config.properties.headers?.length || 0) + 1}`];
-    const newRows = (config.properties.rows || [[]]).map(row => [...row, '']);
-    updateTableProperty('headers', newHeaders);
-    updateTableProperty('rows', newRows);
-  };
+    const newHeaders = [
+      ...(config.properties.headers || []),
+      `Başlık ${(config.properties.headers?.length || 0) + 1}`,
+    ]
+    const newRows = (config.properties.rows || [[]]).map((row) => [...row, ""])
+    updateTableProperty("headers", newHeaders)
+    updateTableProperty("rows", newRows)
+  }
 
   const addRow = () => {
-    const newRows = [...(config.properties.rows || [[]]), new Array(config.properties.headers?.length || 0).fill('')];
-    updateTableProperty('rows', newRows);
-  };
+    const newRows = [
+      ...(config.properties.rows || [[]]),
+      new Array(config.properties.headers?.length || 0).fill(""),
+    ]
+    updateTableProperty("rows", newRows)
+  }
 
   const removeRow = (rowIndex: number) => {
-    const newRows = (config.properties.rows || [[]]).filter((_, index) => index !== rowIndex);
-    updateTableProperty('rows', newRows);
-  };
+    const newRows = (config.properties.rows || [[]]).filter(
+      (_, index) => index !== rowIndex
+    )
+    updateTableProperty("rows", newRows)
+  }
 
   const updateTableProperty = async (key: string, value: any) => {
-    if (!activeTab) return;
+    if (!activeTab) return
 
     const updatedConfig = {
       ...config,
       properties: {
         ...config.properties,
-        [key]: value
-      }
-    };
+        [key]: value,
+      },
+    }
 
     try {
-      const updatedLayout = activeTab.layout?.map(item =>
-        item.id === config.id ? updatedConfig : item
-      ) || [];
+      const updatedLayout =
+        activeTab.layout?.map((item) =>
+          item.id === config.id ? updatedConfig : item
+        ) || []
 
       await updateTab(activeTab.id, {
         ...activeTab,
-        layout: updatedLayout
-      });
+        layout: updatedLayout,
+      })
 
       if (onContentUpdate) {
-        onContentUpdate(updatedConfig);
+        onContentUpdate(updatedConfig)
       }
-      toast.success("İçerik güncellendi");
+      toast.success("İçerik güncellendi")
     } catch (error) {
-      console.error("İçerik güncelleme hatası:", error);
-      toast.error("İçerik güncellenirken bir hata oluştu");
+      console.error("İçerik güncelleme hatası:", error)
+      toast.error("İçerik güncellenirken bir hata oluştu")
     }
-  };
+  }
 
   const saveChanges = () => {
-    setIsEditing(false);
+    setIsEditing(false)
     updateTab(config.id, {
-      layout: [config]
-    });
-  };
+      layout: [config],
+    })
+  }
 
   const handleAddRow = async () => {
     if (config.type === "table" && activeTab) {
       try {
-        const newRow = Array(config.properties.headers?.length || 0).fill("");
+        const newRow = Array(config.properties.headers?.length || 0).fill("")
         const updatedConfig = {
           ...config,
           properties: {
             ...config.properties,
-            rows: [...(config.properties.rows || []), newRow]
-          }
-        };
+            rows: [...(config.properties.rows || []), newRow],
+          },
+        }
 
-        const updatedLayout = activeTab.layout?.map(item =>
+        const updatedLayout = activeTab.layout?.map((item) =>
           item.id === config.id ? updatedConfig : item
-        );
+        )
 
         await updateTab(activeTab.id, {
           ...activeTab,
-          layout: updatedLayout
-        });
+          layout: updatedLayout,
+        })
 
-        updateLayout(activeTab.id, updatedLayout);
+        updateLayout(activeTab.id, updatedLayout)
 
-        toast.success("Yeni satır eklendi");
+        toast.success("Yeni satır eklendi")
       } catch (error) {
-        toast.error("Satır eklenirken bir hata oluştu");
+        toast.error("Satır eklenirken bir hata oluştu")
       }
     }
-  };
+  }
 
   const handleDeleteRow = async (rowIndex: number) => {
     if (config.type === "table" && activeTab) {
       try {
-        const updatedRows = [...(config.properties.rows || [])];
-        updatedRows.splice(rowIndex, 1);
+        const updatedRows = [...(config.properties.rows || [])]
+        updatedRows.splice(rowIndex, 1)
 
         const updatedConfig = {
           ...config,
           properties: {
             ...config.properties,
-            rows: updatedRows
-          }
-        };
+            rows: updatedRows,
+          },
+        }
 
-        const updatedLayout = activeTab.layout?.map(item =>
+        const updatedLayout = activeTab.layout?.map((item) =>
           item.id === config.id ? updatedConfig : item
-        );
+        )
 
         await updateTab(activeTab.id, {
           ...activeTab,
-          layout: updatedLayout
-        });
+          layout: updatedLayout,
+        })
 
-        toast.success("Satır silindi");
+        toast.success("Satır silindi")
       } catch (error) {
-        toast.error("Satır silinirken bir hata oluştu");
+        toast.error("Satır silinirken bir hata oluştu")
       }
     }
-  };
+  }
 
   const handleKeyDown = (
     event: React.KeyboardEvent<HTMLInputElement>,
     rowIndex: number,
     cellIndex: number
   ) => {
-    if (event.key === 'Tab' && !event.shiftKey) {
-      event.preventDefault();
-      
-      const isLastCell = cellIndex === config.properties.headers!.length - 1;
-      const isLastRow = rowIndex === config.properties.rows!.length - 1;
+    if (event.key === "Tab" && !event.shiftKey) {
+      event.preventDefault()
+
+      const isLastCell = cellIndex === config.properties.headers!.length - 1
+      const isLastRow = rowIndex === config.properties.rows!.length - 1
 
       if (isLastCell && isLastRow) {
-        handleAddRow();
+        handleAddRow()
       }
-    } else if (event.key === 'Enter') {
-      event.preventDefault();
-      const isLastRow = rowIndex === config.properties.rows!.length - 1;
-      
+    } else if (event.key === "Enter") {
+      event.preventDefault()
+      const isLastRow = rowIndex === config.properties.rows!.length - 1
+
       if (isLastRow) {
-        handleAddRow();
+        handleAddRow()
       }
     }
-  };
+  }
 
   // Tablo için stil tanımlamaları
   const tableStyles = {
@@ -238,47 +263,55 @@ export function DynamicComponent({ config, fields, onContentUpdate }: DynamicCom
     th: "px-4 py-2 text-left text-sm font-semibold text-gray-600 border-b border-gray-200",
     tr: "hover:bg-gray-50 transition-colors",
     td: "px-4 py-2 text-sm text-gray-700 border-b border-gray-200",
-    input: "w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-ring rounded px-1",
-    rowNumber: "w-10 px-4 py-2 text-sm text-gray-500 border-b border-gray-200 bg-gray-50 text-center font-mono"
-  };
+    input:
+      "w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-ring rounded px-1",
+    rowNumber:
+      "w-10 px-4 py-2 text-sm text-gray-500 border-b border-gray-200 bg-gray-50 text-center font-mono",
+  }
 
   const renderContent = () => {
     switch (config.type) {
-      case 'input':
+      case "input":
         return (
-          <div className="w-full h-full bg-background border rounded-md shadow-sm">
+          <div className="h-full w-full rounded-md border bg-background shadow-sm">
             <input
               type="text"
               placeholder={config.properties.placeholder}
-              className="w-full h-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 ring-primary"
-              onChange={(e) => handleEvent(e, 'change')}
+              className="h-full w-full rounded-md px-3 py-2 ring-primary focus:outline-none focus:ring-2"
+              onChange={(e) => handleEvent(e, "change")}
             />
           </div>
-        );
-      case 'button':
+        )
+      case "button":
         return (
-          <button 
-            className="w-full h-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-            onClick={(e) => handleEvent(e, 'click')}
+          <button
+            className="h-full w-full rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+            onClick={(e) => handleEvent(e, "click")}
           >
             {config.properties.label}
           </button>
-        );
-      case 'textarea':
+        )
+      case "textarea":
         return (
-          <div className="w-full h-full bg-background border rounded-md shadow-sm">
+          <div className="h-full w-full rounded-md border bg-background shadow-sm">
             <textarea
               placeholder={config.properties.placeholder}
-              className="w-full h-full px-3 py-2 rounded-md resize-none focus:outline-none focus:ring-2 ring-primary"
+              className="h-full w-full resize-none rounded-md px-3 py-2 ring-primary focus:outline-none focus:ring-2"
             />
           </div>
-        );
-      case 'select':
+        )
+      case "select":
         return (
-          <div className="w-full h-full bg-background border rounded-md shadow-sm">
-            <Select onValueChange={(value) => handleEvent({ target: { value } } as any, 'change')}>
-              <SelectTrigger className="w-full h-full">
-                <SelectValue placeholder={config.properties.placeholder || "Seçiniz"} />
+          <div className="h-full w-full rounded-md border bg-background shadow-sm">
+            <Select
+              onValueChange={(value) =>
+                handleEvent({ target: { value } } as any, "change")
+              }
+            >
+              <SelectTrigger className="h-full w-full">
+                <SelectValue
+                  placeholder={config.properties.placeholder || "Seçiniz"}
+                />
               </SelectTrigger>
               <SelectContent>
                 {config.properties.options?.map((option, index) => (
@@ -289,12 +322,14 @@ export function DynamicComponent({ config, fields, onContentUpdate }: DynamicCom
               </SelectContent>
             </Select>
           </div>
-        );
+        )
       case "table":
         return (
-          <div className="border rounded-md bg-card shadow-sm">
-            <div className="p-3 border-b bg-muted/30 flex justify-between items-center">
-              <span className="text-sm font-medium">{config.properties.label}</span>
+          <div className="rounded-md border bg-card shadow-sm">
+            <div className="flex items-center justify-between border-b bg-muted/30 p-3">
+              <span className="text-sm font-medium">
+                {config.properties.label}
+              </span>
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
@@ -302,7 +337,7 @@ export function DynamicComponent({ config, fields, onContentUpdate }: DynamicCom
                   onClick={handleAddRow}
                   className="h-7"
                 >
-                  <Plus className="w-4 h-4 mr-1" />
+                  <Plus className="mr-1 h-4 w-4" />
                   Yeni Satır
                 </Button>
               </div>
@@ -317,8 +352,10 @@ export function DynamicComponent({ config, fields, onContentUpdate }: DynamicCom
                         <input
                           type="text"
                           value={header}
-                          onChange={(e) => handleHeaderChange(index, e.target.value)}
-                          className="w-full bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-ring rounded px-1 font-semibold"
+                          onChange={(e) =>
+                            handleHeaderChange(index, e.target.value)
+                          }
+                          className="w-full rounded border-none bg-transparent px-1 font-semibold focus:outline-none focus:ring-1 focus:ring-ring"
                         />
                       </th>
                     ))}
@@ -334,8 +371,16 @@ export function DynamicComponent({ config, fields, onContentUpdate }: DynamicCom
                           <input
                             type="text"
                             value={cell}
-                            onChange={(e) => handleCellChange(rowIndex, cellIndex, e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(e, rowIndex, cellIndex)}
+                            onChange={(e) =>
+                              handleCellChange(
+                                rowIndex,
+                                cellIndex,
+                                e.target.value
+                              )
+                            }
+                            onKeyDown={(e) =>
+                              handleKeyDown(e, rowIndex, cellIndex)
+                            }
                             className={tableStyles.input}
                           />
                         </td>
@@ -347,7 +392,7 @@ export function DynamicComponent({ config, fields, onContentUpdate }: DynamicCom
                           onClick={() => handleDeleteRow(rowIndex)}
                           className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </td>
                     </tr>
@@ -356,15 +401,15 @@ export function DynamicComponent({ config, fields, onContentUpdate }: DynamicCom
               </table>
             </div>
           </div>
-        );
+        )
       default:
-        return null;
+        return null
     }
-  };
+  }
 
   return (
     <div style={style} className="absolute">
       {renderContent()}
     </div>
-  );
-} 
+  )
+}

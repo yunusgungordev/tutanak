@@ -1,11 +1,28 @@
 import { useState } from "react"
+import { DragDropContext, Draggable, Droppable } from "@hello-pangea/dnd"
+import {
+  ChevronDown,
+  ChevronUp,
+  GripVertical,
+  Plus,
+  Trash2,
+} from "lucide-react"
+
 import { Button } from "@/components/ui/button"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, GripVertical, ChevronDown, ChevronUp } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface FieldOptions {
   minLength?: number
@@ -35,7 +52,7 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
     const newField: Field = {
       name: "",
       type: "text",
-      required: true
+      required: true,
     }
     setFields([...fields, newField])
     onFieldsChange([...fields, newField])
@@ -44,25 +61,27 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
   const validateFieldName = (name: string): string | undefined => {
     if (!name) return "Alan adı zorunludur"
     if (name.length < 2) return "Alan adı en az 2 karakter olmalıdır"
-    if (!/^[a-z][a-z0-9_]*$/.test(name)) return "Alan adı küçük harf ile başlamalı ve sadece harf, rakam ve alt çizgi içermelidir"
-    if (fields.some((field, idx) => field.name === name)) return "Bu alan adı zaten kullanılıyor"
+    if (!/^[a-z][a-z0-9_]*$/.test(name))
+      return "Alan adı küçük harf ile başlamalı ve sadece harf, rakam ve alt çizgi içermelidir"
+    if (fields.some((field, idx) => field.name === name))
+      return "Bu alan adı zaten kullanılıyor"
     return undefined
   }
 
   const updateField = (index: number, updates: Partial<Field>) => {
     const updatedFields = fields.map((field, i) => {
       if (i !== index) return field
-      
+
       const updatedField = { ...field, ...updates }
-      
+
       if (updates.name !== undefined) {
         updatedField.error = validateFieldName(updates.name)
       }
-      
+
       return updatedField
     })
     setFields(updatedFields)
-    onFieldsChange(updatedFields.filter(f => !f.error))
+    onFieldsChange(updatedFields.filter((f) => !f.error))
   }
 
   const removeField = (index: number) => {
@@ -71,17 +90,25 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
     onFieldsChange(updatedFields)
   }
 
-  const reorderFields = (list: Field[], startIndex: number, endIndex: number) => {
+  const reorderFields = (
+    list: Field[],
+    startIndex: number,
+    endIndex: number
+  ) => {
     const result = Array.from(list)
     const [removed] = result.splice(startIndex, 1)
     result.splice(endIndex, 0, removed)
     return result
   }
 
-  const TypeSettings = ({ field, index, onUpdate }: { 
+  const TypeSettings = ({
+    field,
+    index,
+    onUpdate,
+  }: {
     field: Field
     index: number
-    onUpdate: (index: number, updates: Partial<Field>) => void 
+    onUpdate: (index: number, updates: Partial<Field>) => void
   }) => {
     const [isOpen, setIsOpen] = useState(false)
 
@@ -92,44 +119,56 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
             <div className="space-y-2 pt-2">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs text-muted-foreground">Min Uzunluk</label>
+                  <label className="text-xs text-muted-foreground">
+                    Min Uzunluk
+                  </label>
                   <Input
                     type="number"
                     placeholder="Min"
                     value={field.options?.minLength || ""}
-                    onChange={(e) => onUpdate(index, { 
-                      options: { 
-                        ...field.options, 
-                        minLength: parseInt(e.target.value) || undefined 
-                      } 
-                    })}
+                    onChange={(e) =>
+                      onUpdate(index, {
+                        options: {
+                          ...field.options,
+                          minLength: parseInt(e.target.value) || undefined,
+                        },
+                      })
+                    }
                     className="h-7"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground">Max Uzunluk</label>
+                  <label className="text-xs text-muted-foreground">
+                    Max Uzunluk
+                  </label>
                   <Input
                     type="number"
                     placeholder="Max"
                     value={field.options?.maxLength || ""}
-                    onChange={(e) => onUpdate(index, { 
-                      options: { 
-                        ...field.options, 
-                        maxLength: parseInt(e.target.value) || undefined 
-                      } 
-                    })}
+                    onChange={(e) =>
+                      onUpdate(index, {
+                        options: {
+                          ...field.options,
+                          maxLength: parseInt(e.target.value) || undefined,
+                        },
+                      })
+                    }
                     className="h-7"
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Regex Pattern</label>
+                <label className="text-xs text-muted-foreground">
+                  Regex Pattern
+                </label>
                 <Input
                   placeholder="örn: ^[0-9]+$"
                   value={field.options?.pattern || ""}
-                  onChange={(e) => onUpdate(index, { 
-                    options: { ...field.options, pattern: e.target.value } 
-                  })}
+                  onChange={(e) =>
+                    onUpdate(index, {
+                      options: { ...field.options, pattern: e.target.value },
+                    })
+                  }
                   className="h-7"
                 />
               </div>
@@ -140,32 +179,40 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
             <div className="space-y-2 pt-2">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs text-muted-foreground">Min Değer</label>
+                  <label className="text-xs text-muted-foreground">
+                    Min Değer
+                  </label>
                   <Input
                     type="number"
                     placeholder="Min"
                     value={field.options?.min || ""}
-                    onChange={(e) => onUpdate(index, { 
-                      options: { 
-                        ...field.options, 
-                        min: parseInt(e.target.value) || undefined 
-                      } 
-                    })}
+                    onChange={(e) =>
+                      onUpdate(index, {
+                        options: {
+                          ...field.options,
+                          min: parseInt(e.target.value) || undefined,
+                        },
+                      })
+                    }
                     className="h-7"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-muted-foreground">Max Değer</label>
+                  <label className="text-xs text-muted-foreground">
+                    Max Değer
+                  </label>
                   <Input
                     type="number"
                     placeholder="Max"
                     value={field.options?.max || ""}
-                    onChange={(e) => onUpdate(index, { 
-                      options: { 
-                        ...field.options, 
-                        max: parseInt(e.target.value) || undefined 
-                      } 
-                    })}
+                    onChange={(e) =>
+                      onUpdate(index, {
+                        options: {
+                          ...field.options,
+                          max: parseInt(e.target.value) || undefined,
+                        },
+                      })
+                    }
                     className="h-7"
                   />
                 </div>
@@ -195,17 +242,23 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
             </SelectContent>
           </Select>
           {(field.type === "text" || field.type === "number") && (
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="h-8 px-2"
               onClick={() => setIsOpen(!isOpen)}
             >
-              {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              {isOpen ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
             </Button>
           )}
         </div>
-        {isOpen && (field.type === "text" || field.type === "number") && renderAdvancedOptions()}
+        {isOpen &&
+          (field.type === "text" || field.type === "number") &&
+          renderAdvancedOptions()}
       </div>
     )
   }
@@ -219,8 +272,8 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
       options: {
         minLength: 0,
         maxLength: 1000,
-        multiline: false
-      }
+        multiline: false,
+      },
     },
     {
       name: "numara",
@@ -230,8 +283,8 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
       options: {
         min: 0,
         max: 999999,
-        step: 1
-      }
+        step: 1,
+      },
     },
     {
       name: "tarih",
@@ -240,8 +293,8 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
       required: false,
       options: {
         minDate: null,
-        maxDate: null
-      }
+        maxDate: null,
+      },
     },
     {
       name: "secim",
@@ -250,8 +303,8 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
       required: false,
       options: {
         choices: [],
-        multiple: false
-      }
+        multiple: false,
+      },
     },
     {
       name: "onay",
@@ -259,37 +312,39 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
       type: "checkbox",
       required: false,
       options: {
-        defaultValue: false
-      }
-    }
+        defaultValue: false,
+      },
+    },
   ]
 
   return (
-    <div className="flex flex-col h-[500px]">
-      <div className="p-4 border-b bg-muted/30">
+    <div className="flex h-[500px] flex-col">
+      <div className="border-b bg-muted/30 p-4">
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-          <Select
-            onValueChange={(template) => {
-              const selectedTemplate = fieldTemplates.find(t => t.name === template)
-              if (selectedTemplate) {
-                setFields([...fields, { ...selectedTemplate }])
-              }
-            }}
-          >
-            <SelectTrigger className="h-8">
-              <SelectValue placeholder="Şablon seç" />
-            </SelectTrigger>
-            <SelectContent>
-              {fieldTemplates.map(template => (
-                <SelectItem key={template.name} value={template.name}>
-                  {template.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select
+              onValueChange={(template) => {
+                const selectedTemplate = fieldTemplates.find(
+                  (t) => t.name === template
+                )
+                if (selectedTemplate) {
+                  setFields([...fields, { ...selectedTemplate }])
+                }
+              }}
+            >
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="Şablon seç" />
+              </SelectTrigger>
+              <SelectContent>
+                {fieldTemplates.map((template) => (
+                  <SelectItem key={template.name} value={template.name}>
+                    {template.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button variant="ghost" size="sm" onClick={addField}>
-              <Plus className="w-4 h-4" />
+              <Plus className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -300,7 +355,7 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
           <DragDropContext
             onDragEnd={(result) => {
               if (!result.destination) return
-              
+
               const items = reorderFields(
                 fields,
                 result.source.index,
@@ -314,37 +369,51 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
               {(provided) => (
                 <div {...provided.droppableProps} ref={provided.innerRef}>
                   {fields.map((field, index) => (
-                    <Draggable key={field.name || index} draggableId={field.name || `field-${index}`} index={index}>
+                    <Draggable
+                      key={field.name || index}
+                      draggableId={field.name || `field-${index}`}
+                      index={index}
+                    >
                       {(provided) => (
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           className="mb-2"
                         >
-                          <div className="flex items-center gap-2 p-3 border rounded-md bg-card">
+                          <div className="flex items-center gap-2 rounded-md border bg-card p-3">
                             <div {...provided.dragHandleProps}>
-                              <GripVertical className="w-4 h-4 text-muted-foreground" />
+                              <GripVertical className="h-4 w-4 text-muted-foreground" />
                             </div>
                             <div className="flex-1 space-y-2">
                               <Input
                                 placeholder="Alan adı"
                                 value={field.name}
-                                onChange={(e) => updateField(index, { name: e.target.value })}
+                                onChange={(e) =>
+                                  updateField(index, { name: e.target.value })
+                                }
                                 className="h-8"
                               />
-                              <TypeSettings 
-                                field={field} 
-                                index={index} 
-                                onUpdate={(index, updates) => updateField(index, updates)} 
+                              <TypeSettings
+                                field={field}
+                                index={index}
+                                onUpdate={(index, updates) =>
+                                  updateField(index, updates)
+                                }
                               />
                               <div className="flex items-center gap-2">
                                 <input
                                   type="checkbox"
                                   checked={field.required}
-                                  onChange={(e) => updateField(index, { required: e.target.checked })}
+                                  onChange={(e) =>
+                                    updateField(index, {
+                                      required: e.target.checked,
+                                    })
+                                  }
                                   className="rounded border-gray-300"
                                 />
-                                <span className="text-sm text-muted-foreground">Zorunlu alan</span>
+                                <span className="text-sm text-muted-foreground">
+                                  Zorunlu alan
+                                </span>
                               </div>
                             </div>
                             <Button
@@ -353,7 +422,7 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
                               onClick={() => removeField(index)}
                               className="h-8 w-8 p-0"
                             >
-                              <Trash2 className="w-4 h-4 text-destructive" />
+                              <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
                         </div>
@@ -369,4 +438,4 @@ export function ModelPanel({ onFieldsChange }: ModelPanelProps) {
       </ScrollArea>
     </div>
   )
-} 
+}

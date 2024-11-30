@@ -2,15 +2,15 @@ import { LayoutConfig } from "./tab"
 
 export interface ComponentProperties {
   margins?: {
-    top: number;
-    right: number;
-    bottom: number;
-    left: number;
-  };
-  fontSize?: number;
-  fontFamily?: string;
-  lineHeight?: string | number;
-  content?: string;
+    top: number
+    right: number
+    bottom: number
+    left: number
+  }
+  fontSize?: number
+  fontFamily?: string
+  lineHeight?: string | number
+  content?: string
   label?: string
   placeholder?: string
   width: number
@@ -52,24 +52,24 @@ export interface ComponentProperties {
     fontWeight?: string
   }
   events?: {
-    id: string;
-    type: 'click' | 'change' | 'submit';
-    action: 'openDialog' | 'showMessage' | 'navigateTab' | 'executeQuery';
-    target?: string;
-    params?: Record<string, any>;
-  }[];
+    id: string
+    type: "click" | "change" | "submit"
+    action: "openDialog" | "showMessage" | "navigateTab" | "executeQuery"
+    target?: string
+    params?: Record<string, any>
+  }[]
   dependencies?: {
     field: string
-    condition: 'equals' | 'notEquals' | 'contains' | 'greaterThan' | 'lessThan'
+    condition: "equals" | "notEquals" | "contains" | "greaterThan" | "lessThan"
     value: any
-    action: 'show' | 'hide' | 'enable' | 'disable'
+    action: "show" | "hide" | "enable" | "disable"
   }[]
   tasks?: {
-    id: string;
-    text: string;
-    completed: boolean;
-    createdAt: string;
-  }[];
+    id: string
+    text: string
+    completed: boolean
+    createdAt: string
+  }[]
 }
 
 export interface DraggableComponentType {
@@ -89,4 +89,4 @@ export interface DraggableComponentProps {
   renderComponentPreview: (item: LayoutConfig) => React.ReactNode
   gridWidth: number
   gridHeight: number
-} 
+}
