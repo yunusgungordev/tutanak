@@ -7,7 +7,6 @@
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::fs;
 
 fn get_db_path() -> PathBuf {
     let app_data = std::env::var("APPDATA")
