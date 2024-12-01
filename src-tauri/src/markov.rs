@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use rand::seq::SliceRandom;
+use serde_json::{json, Value};
+use crate::{DateRange, SemanticMatch, SuggestedFilters};
 
 #[derive(Default)]
 pub struct MarkovChain {
@@ -92,5 +94,155 @@ impl MarkovChain {
         }
         
         importance_score
+    }
+
+    pub fn analyze_sentiment(&self, text: &str) -> String {
+        // Basit duygu analizi
+        let positive_words = ["iyi", "güzel", "harika", "muhteşem"];
+        let negative_words = ["kötü", "berbat", "korkunç", "üzgün"];
+        
+        let words: Vec<&str> = text.split_whitespace().collect();
+        let pos_count = words.iter().filter(|w| positive_words.contains(w)).count();
+        let neg_count = words.iter().filter(|w| negative_words.contains(w)).count();
+        
+        match (pos_count, neg_count) {
+            (p, n) if p > n => "positive",
+            (p, n) if n > p => "negative",
+            _ => "neutral",
+        }.to_string()
+    }
+
+    pub fn analyze_categories(&self, text: &str) -> Vec<String> {
+        // Basit kategori analizi
+        let categories = vec!["iş", "kişisel", "alışveriş", "sağlık", "eğitim"];
+        categories.into_iter()
+            .filter(|&cat| text.to_lowercase().contains(&cat.to_lowercase()))
+            .map(String::from)
+            .collect()
+    }
+
+    pub fn extract_keywords(&self, text: &str) -> Vec<String> {
+        text.split_whitespace()
+            .filter(|&word| word.len() > 3)
+            .take(5)
+            .map(String::from)
+            .collect()
+    }
+
+    pub fn suggest_tags(&self, text: &str) -> Vec<String> {
+        let common_tags = ["acil", "önemli", "toplantı", "proje", "görev"];
+        common_tags.iter()
+            .filter(|&tag| text.to_lowercase().contains(&tag.to_lowercase()))
+            .map(|&s| s.to_string())
+            .collect()
+    }
+
+    pub fn train_with_metadata(&mut self, text: &str, metadata: &Value) {
+        self.train(text);
+    }
+
+    pub fn find_semantic_matches(&self, query: &str, notes: &[Value]) -> Vec<SemanticMatch> {
+        let query_words: Vec<String> = query
+            .split_whitespace()
+            .map(|s| s.to_lowercase())
+            .collect();
+            
+        let mut matches = Vec::new();
+        
+        for note in notes {
+            let content = note["content"].as_str().unwrap_or("");
+            let note_words: Vec<String> = content
+                .split_whitespace()
+                .map(|s| s.to_lowercase())
+                .collect();
+                
+            let relevance = self.calculate_semantic_relevance(&query_words, &note_words);
+            
+            if relevance > 0.3 {
+                matches.push(SemanticMatch {
+                    note_id: note["id"].as_str().unwrap_or("").to_string(),
+                    relevance,
+                    matched_terms: self.find_matched_terms(&query_words, &note_words),
+                });
+            }
+        }
+        
+        matches.sort_by(|a, b| b.relevance.partial_cmp(&a.relevance).unwrap());
+        matches
+    }
+    
+    pub fn calculate_semantic_relevance(&self, query_words: &[String], note_words: &[String]) -> f64 {
+        let mut relevance = 0.0;
+        
+        for window in note_words.windows(self.order) {
+            if let Some(next_words) = self.chain.get(window) {
+                for query_word in query_words {
+                    if next_words.contains(query_word) {
+                        relevance += 1.0;
+                    }
+                }
+            }
+        }
+        
+        relevance / (note_words.len() as f64)
+    }
+    
+    pub fn suggest_filters(&self, query: &str, notes: &[Value]) -> SuggestedFilters {
+        // Kategori analizi
+        let categories: Vec<String> = notes
+            .iter()
+            .filter_map(|note| note["category"].as_str())
+            .map(String::from)
+            .collect();
+            
+        // Öncelik analizi
+        let priorities: Vec<String> = notes
+            .iter()
+            .filter_map(|note| note["priority"].as_str())
+            .map(String::from)
+            .collect();
+            
+        // Tarih aralığı analizi
+        let dates: Vec<String> = notes
+            .iter()
+            .filter_map(|note| note["date"].as_str())
+            .map(String::from)
+            .collect();
+            
+        SuggestedFilters {
+            category: Some(categories),
+            priority: Some(priorities),
+            date_range: Some(DateRange {
+                start: dates.first().cloned().unwrap_or_default(),
+                end: dates.last().cloned().unwrap_or_default(),
+            }),
+        }
+    }
+
+    pub fn analyze_query(&self, query: &str) -> Value {
+        let mut result = serde_json::Map::new();
+        
+        // Tarih formatını kontrol et
+        if let Ok(date) = chrono::NaiveDate::parse_from_str(query, "%d/%m/%Y") {
+            result.insert("type".to_string(), json!("date"));
+            result.insert("value".to_string(), json!(date.to_string()));
+        } else {
+            result.insert("type".to_string(), json!("text"));
+            result.insert("value".to_string(), json!(query));
+        }
+        
+        Value::Object(result)
+    }
+
+    pub fn find_matched_terms(&self, query_words: &[String], note_words: &[String]) -> Vec<String> {
+        let mut matched_terms = Vec::new();
+        
+        for query_word in query_words {
+            if note_words.contains(query_word) {
+                matched_terms.push(query_word.clone());
+            }
+        }
+        
+        matched_terms
     }
 } 

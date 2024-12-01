@@ -18,9 +18,13 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 
 import { AddNoteDialog } from "./add-note-dialog"
 import { NotificationBell } from "./notification-bell"
+import { analyzeSearchQuery, semanticSearch } from "@/lib/ai-helper"
+import { TimelineNote } from "@/types"
+import { SearchableNote } from "@/lib/ai-helper"
 
 const HOUR_WIDTH = 100
 const MINUTE_MARK_HEIGHT = 10
@@ -52,6 +56,15 @@ export function Timeline() {
   const [dates, setDates] = useState<Date[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
   const [cellWidth, setCellWidth] = useState(window.innerWidth * 0.7)
+  const [activeFilters, setActiveFilters] = useState<{
+    categories: string[];
+    priorities: ("low" | "medium" | "high")[];
+    dateRange: { start: Date | null; end: Date | null };
+  }>({
+    categories: [],
+    priorities: [],
+    dateRange: { start: null, end: null }
+  });
 
   useEffect(() => {
     const now = new Date()
@@ -86,10 +99,10 @@ export function Timeline() {
 
   useEffect(() => {
     if (searchResults.length > 0) {
-      const firstResult = searchResults[0]
       const resultIndex = dates.findIndex(
         (date) =>
-          startOfDay(date).getTime() === startOfDay(firstResult.date).getTime()
+          startOfDay(date).getTime() === 
+          startOfDay(new Date(searchResults[0].date)).getTime()
       )
 
       if (resultIndex !== -1) {
@@ -114,7 +127,7 @@ export function Timeline() {
         const resultIndex = dates.findIndex(
           (date) =>
             startOfDay(date).getTime() ===
-            startOfDay(searchResults[0].date).getTime()
+            startOfDay(new Date(searchResults[0].date)).getTime()
         )
         if (resultIndex !== -1) {
           const newPosition = calculatePosition(resultIndex)
@@ -163,213 +176,325 @@ export function Timeline() {
     }
   )
 
-  const handleSearch = (value: string) => {
-    setSearchQuery(value)
-
-    // Tarih formatını kontrol et (DD.MM.YYYY veya DD/MM/YYYY)
-    const datePattern = /^(\d{2})[./](\d{2})[./](\d{4})$/
-    const match = value.match(datePattern)
-
-    if (match) {
-      const [_, day, month, year] = match
-      const searchDate = new Date(
-        parseInt(year),
-        parseInt(month) - 1,
-        parseInt(day)
-      )
-
-      // Tarihe göre notları filtrele
-      const filteredNotes = notes.filter((note) => {
-        const noteDate = new Date(note.date)
-        return (
-          noteDate.getDate() === searchDate.getDate() &&
-          noteDate.getMonth() === searchDate.getMonth() &&
-          noteDate.getFullYear() === searchDate.getFullYear()
-        )
-      })
-
-      if (filteredNotes.length > 0) {
-        setSearchResults(filteredNotes)
-
-        // İlgili tarihe git
-        const resultIndex = dates.findIndex(
-          (date) =>
-            startOfDay(date).getTime() === startOfDay(searchDate).getTime()
-        )
-
-        if (resultIndex !== -1) {
-          const newPosition = calculatePosition(resultIndex)
-          setPosition({
-            x: getClampedPosition(newPosition),
-            y: 0,
-          })
-        }
-      } else {
-        setSearchResults([])
-      }
-    } else {
-      // Normal metin araması
-      searchNotes(value)
+  const handleSearch = async (value: string) => {
+    setSearchQuery(value);
+    
+    if (!value.trim()) {
+      setSearchResults([]);
+      setActiveFilters({
+        categories: [],
+        priorities: [],
+        dateRange: { start: null, end: null }
+      });
+      return;
     }
-  }
+
+    try {
+      const queryAnalysis = await analyzeSearchQuery(value);
+      
+      if (queryAnalysis.type === 'date') {
+        handleDateSearch(new Date(queryAnalysis.value));
+      } else {
+        // Not verilerini hazırla
+        const notesForSearch = notes.map(note => ({
+          ...note,
+          isNotified: note.isNotified ?? false,
+          isImportant: note.isImportant ?? false,
+          date: note.date,
+          dueDate: note.dueDate,
+          lastNotified: note.lastNotified
+        })) as SearchableNote[];
+
+        const searchAnalysis = await semanticSearch(value, notesForSearch);
+        
+        if (searchAnalysis.semanticMatches.length > 0) {
+          // Eşleşen notları bul ve orijinal not objelerini kullan
+          const matchedNotes = filterNotes(
+            notes.filter(note => 
+              searchAnalysis.semanticMatches.some(match => 
+                match.noteId === note.id
+              )
+            )
+          ).sort((a, b) => {
+            const aMatch = searchAnalysis.semanticMatches.find(m => m.noteId === a.id);
+            const bMatch = searchAnalysis.semanticMatches.find(m => m.noteId === b.id);
+            return (bMatch?.relevance || 0) - (aMatch?.relevance || 0);
+          });
+          
+          setSearchResults(matchedNotes as TimelineNote[]);
+          
+          if (searchAnalysis.suggestedFilters) {
+            setActiveFilters({
+              categories: searchAnalysis.suggestedFilters.category || [],
+              priorities: (searchAnalysis.suggestedFilters.priority || []) as ("low" | "medium" | "high")[],
+              dateRange: {
+                start: searchAnalysis.suggestedFilters.dateRange?.start ? 
+                  new Date(searchAnalysis.suggestedFilters.dateRange.start) : null,
+                end: searchAnalysis.suggestedFilters.dateRange?.end ? 
+                  new Date(searchAnalysis.suggestedFilters.dateRange.end) : null
+              }
+            });
+          }
+        } else {
+          setSearchResults([]);
+        }
+      }
+    } catch (error) {
+      console.error('Arama hatası:', error);
+      setSearchResults([]);
+    }
+  };
+
+  const handleDateSearch = (date: Date) => {
+    const matchingNotes = notes.filter(note => 
+      startOfDay(new Date(note.date)).getTime() === startOfDay(date).getTime()
+    );
+    setSearchResults(matchingNotes);
+  };
+
+  // Filtreleme fonksiyonu
+  const filterNotes = (notesToFilter: TimelineNote[]) => {
+    return notesToFilter.filter(note => {
+      const categoryMatch = activeFilters.categories.length === 0 || 
+        (note.category && activeFilters.categories.includes(note.category));
+        
+      const priorityMatch = activeFilters.priorities.length === 0 || 
+        (note.priority && activeFilters.priorities.includes(note.priority));
+        
+      const dateMatch = !activeFilters.dateRange.start || !activeFilters.dateRange.end || 
+        (new Date(note.date) >= activeFilters.dateRange.start && 
+         new Date(note.date) <= activeFilters.dateRange.end);
+         
+      return categoryMatch && priorityMatch && dateMatch;
+    });
+  };
 
   return (
     <div className="flex h-full flex-col">
-      {isMinimized ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          className="fixed bottom-4 right-4 z-50 bg-background"
-        >
+      <div className="flex items-center justify-between border-b bg-background/50 px-2 py-2 backdrop-blur-sm">
+        <div className="flex items-center gap-2">
+          <Input
+            type="search"
+            placeholder="Ara..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="h-9 w-[300px]"
+          />
+          {activeFilters.categories.length > 0 || 
+           activeFilters.priorities.length > 0 || 
+           activeFilters.dateRange.start || 
+           activeFilters.dateRange.end ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setActiveFilters({
+                  categories: [],
+                  priorities: [],
+                  dateRange: { start: null, end: null }
+                });
+                handleSearch(searchQuery);
+              }}
+            >
+              Filtreleri Temizle
+            </Button>
+          ) : null}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <AddNoteDialog />
           <Button
             variant="outline"
             size="icon"
-            className="h-10 w-10 rounded-full shadow-lg hover:bg-accent"
-            onClick={() => setIsMinimized(false)}
+            className="h-9 w-9"
+            onClick={() => setIsMinimized(!isMinimized)}
           >
-            <Maximize2 className="h-4 w-4" />
+            {isMinimized ? (
+              <Maximize2 className="h-4 w-4" />
+            ) : (
+              <Minimize2 className="h-4 w-4" />
+            )}
           </Button>
-        </motion.div>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
-          className="flex h-full flex-col"
-        >
-          <div className="flex items-center justify-between border-b bg-background/50 px-2 py-2 backdrop-blur-sm">
-            <div className="flex items-center gap-2">
-              <NotificationBell />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setIsMinimized(true)}
-              >
-                <Minimize2 className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex items-center gap-4">
-              <Input
-                type="search"
-                placeholder="Tarih (gg/aa/yyyy) veya kelime ile ara..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                className="h-9 w-[300px]"
-              />
-              <AddNoteDialog />
-            </div>
-          </div>
-
-          <div
-            ref={containerRef}
-            className="relative flex-1 overflow-hidden bg-white"
-            {...bind()}
-          >
-            <motion.div
-              style={{ x: position.x }}
-              className="absolute inset-0 flex"
+          <NotificationBell />
+        </div>
+      </div>
+      
+      {(activeFilters.categories.length > 0 || 
+        activeFilters.priorities.length > 0 || 
+        activeFilters.dateRange.start || 
+        activeFilters.dateRange.end) && (
+        <div className="flex flex-wrap gap-2 p-2 border-b">
+          {activeFilters.categories.map(category => (
+            <Badge 
+              key={category}
+              variant="secondary"
+              className="cursor-pointer"
+              onClick={() => {
+                setActiveFilters(prev => ({
+                  ...prev,
+                  categories: prev.categories.filter(c => c !== category)
+                }));
+                handleSearch(searchQuery);
+              }}
             >
-              {dates.map((date, index) => (
-                <div
-                  key={index}
-                  className={`relative h-full flex-shrink-0 border-r ${
-                    startOfDay(date).getTime() ===
-                    startOfDay(new Date()).getTime()
-                      ? "bg-primary/5"
-                      : ""
-                  }`}
-                  style={{ width: cellWidth }}
-                >
-                  <div className="scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent h-[calc(100%-40px)] overflow-y-auto p-4">
-                    <div className="grid auto-rows-[120px] grid-cols-2 gap-2">
-                      {notes
-                        .filter(
-                          (note) =>
-                            startOfDay(new Date(note.date)).getTime() ===
-                            startOfDay(date).getTime()
-                        )
-                        .map((note) => (
-                          <Card
-                            key={note.id}
-                            className={cn(
-                              "h-full transition-shadow hover:shadow-md",
-                              note.status === "overdue" && "border-red-500",
-                              note.status === "completed" && "opacity-75",
-                              searchResults.some((r) => r.id === note.id) &&
-                                "ring-2 ring-primary"
-                            )}
-                          >
-                            <div className="flex h-full flex-col p-2">
-                              <div className="mb-1 flex items-center justify-between">
-                                <div className="flex items-center gap-1">
-                                  <h4 className="truncate text-sm font-medium">
-                                    {note.title}
-                                  </h4>
-                                  {note.reminder && (
-                                    <Bell className="h-3 w-3 text-blue-500" />
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <span
-                                    className={cn(
-                                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-                                      note.priority === "high"
-                                        ? "bg-red-100 text-red-800"
-                                        : note.priority === "medium"
-                                          ? "bg-yellow-100 text-yellow-800"
-                                          : "bg-green-100 text-green-800"
-                                    )}
-                                  >
-                                    {note.priority === "high"
-                                      ? "Yüksek"
-                                      : note.priority === "medium"
-                                        ? "Orta"
-                                        : "Düşük"}
-                                  </span>
-                                  {note.status === "completed" && (
-                                    <CheckCircle className="h-3 w-3 text-green-500" />
-                                  )}
-                                </div>
-                              </div>
-                              <p className="line-clamp-2 flex-1 text-xs text-muted-foreground">
-                                {note.content}
-                              </p>
-                              {note.dueDate && (
-                                <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Clock className="h-3 w-3" />
-                                  {format(
-                                    note.dueDate,
-                                    note.dueDate.getHours() === 23 &&
-                                      note.dueDate.getMinutes() === 59
-                                      ? "d MMM"
-                                      : "d MMM HH:mm",
-                                    { locale: tr }
-                                  )}
-                                </div>
+              {category} ×
+            </Badge>
+          ))}
+          
+          {activeFilters.priorities.map(priority => (
+            <Badge 
+              key={priority}
+              variant="secondary"
+              className="cursor-pointer"
+              onClick={() => {
+                setActiveFilters(prev => ({
+                  ...prev,
+                  priorities: prev.priorities.filter(p => p !== priority)
+                }));
+                handleSearch(searchQuery);
+              }}
+            >
+              {priority === 'high' ? 'Yüksek' : 
+               priority === 'medium' ? 'Orta' : 'Düşük'} ×
+            </Badge>
+          ))}
+          
+          {(activeFilters.dateRange.start || activeFilters.dateRange.end) && (
+            <Badge 
+              variant="secondary"
+              className="cursor-pointer"
+              onClick={() => {
+                setActiveFilters(prev => ({
+                  ...prev,
+                  dateRange: { start: null, end: null }
+                }));
+                handleSearch(searchQuery);
+              }}
+            >
+              {format(activeFilters.dateRange.start || new Date(), 'dd/MM/yyyy')} - 
+              {format(activeFilters.dateRange.end || new Date(), 'dd/MM/yyyy')} ×
+            </Badge>
+          )}
+        </div>
+      )}
+
+      <div
+        ref={containerRef}
+        className="relative flex-1 overflow-hidden bg-white"
+        style={{ touchAction: 'none' }}
+        {...bind()}
+      >
+        <motion.div
+          style={{ x: position.x }}
+          className="absolute inset-0 flex"
+        >
+          {dates.map((date, index) => (
+            <div
+              key={index}
+              className={`relative h-full flex-shrink-0 border-r ${
+                startOfDay(date).getTime() ===
+                startOfDay(new Date()).getTime()
+                  ? "bg-primary/5"
+                  : ""
+              }`}
+              style={{ width: cellWidth }}
+            >
+              <div className="scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent h-[calc(100%-40px)] overflow-y-auto p-4">
+                <div className="grid auto-rows-[120px] grid-cols-2 gap-2">
+                  {notes
+                    .filter(
+                      (note) =>
+                        startOfDay(new Date(note.date)).getTime() === startOfDay(date).getTime()
+                    )
+                    .map((note) => (
+                      <Card
+                        key={note.id}
+                        className={cn(
+                          "h-full transition-shadow hover:shadow-md",
+                          note.status === "overdue" && "border-red-500",
+                          note.status === "completed" && "opacity-75",
+                          searchResults.some((r) => r.id === note.id) &&
+                            "ring-2 ring-primary"
+                        )}
+                      >
+                        <div className="flex h-full flex-col p-2">
+                          <div className="mb-1 flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <h4 className="truncate text-sm font-medium">
+                                {note.title}
+                              </h4>
+                              {note.reminder && (
+                                <Bell className="h-3 w-3 text-blue-500" />
                               )}
                             </div>
-                          </Card>
-                        ))}
-                    </div>
-                  </div>
-
-                  <div className="absolute bottom-0 left-0 w-full border-t bg-background/50 p-2 backdrop-blur-sm">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-sm font-medium">
-                        {format(date, "d MMM", { locale: tr })}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {format(date, "EEEE", { locale: tr })}
-                      </span>
-                    </div>
-                  </div>
+                            <div className="flex items-center gap-1">
+                              <span
+                                className={cn(
+                                  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                                  note.priority === "high"
+                                    ? "bg-red-100 text-red-800"
+                                    : note.priority === "medium"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-green-100 text-green-800"
+                                )}
+                              >
+                                {note.priority === "high"
+                                  ? "Yüksek"
+                                  : note.priority === "medium"
+                                    ? "Orta"
+                                    : "Düşük"}
+                              </span>
+                              {note.status === "completed" && (
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                              )}
+                            </div>
+                          </div>
+                          <p className="line-clamp-2 flex-1 text-xs text-muted-foreground">
+                            {note.content}
+                          </p>
+                          {note.dueDate && (
+                            <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {format(
+                                new Date(note.dueDate),
+                                new Date(note.dueDate).getHours() === 23 &&
+                                  new Date(note.dueDate).getMinutes() === 59
+                                  ? "d MMM"
+                                  : "d MMM HH:mm",
+                                { locale: tr }
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
                 </div>
-              ))}
-            </motion.div>
-          </div>
+              </div>
+
+              <div className="absolute bottom-0 left-0 w-full border-t bg-background/50 p-2 backdrop-blur-sm">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-sm font-medium">
+                    {format(date, "d MMM", { locale: tr })}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {format(date, "EEEE", { locale: tr })}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
         </motion.div>
+      </div>
+
+      {isMinimized && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="fixed bottom-4 right-4 h-10 w-10 rounded-full shadow-lg hover:bg-accent"
+          onClick={() => setIsMinimized(false)}
+        >
+          <Maximize2 className="h-4 w-4" />
+        </Button>
       )}
     </div>
   )

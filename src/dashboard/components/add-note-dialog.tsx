@@ -23,6 +23,16 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
+import { Badge } from "@/components/ui/badge"
+import { analyzeContent } from "@/lib/ai-helper"
+
+interface ContentAnalysis {
+  sentiment: 'positive' | 'negative' | 'neutral';
+  category: string[];
+  keywords: string[];
+  importance: number;
+  suggestedTags: string[];
+}
 
 export function AddNoteDialog() {
   const { addNote, getSuggestions } = useNotes()
@@ -32,9 +42,14 @@ export function AddNoteDialog() {
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium")
   const [date, setDate] = useState<Date>(new Date())
   const [time, setTime] = useState("")
-  const [reminder, setReminder] = useState(false)
+  const [reminder, setReminder] = useState<boolean>(false)
   const [error, setError] = useState("")
   const [suggestions, setSuggestions] = useState<string>("")
+  const [suggestedTags, setSuggestedTags] = useState<string[]>([])
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [category, setCategory] = useState<string>("")
+  const [analysis, setAnalysis] = useState<ContentAnalysis | null>(null)
+  const [userSetPriority, setUserSetPriority] = useState(false)
 
   useEffect(() => {
     const getSuggestion = async () => {
@@ -48,6 +63,26 @@ export function AddNoteDialog() {
     getSuggestion()
   }, [content])
 
+  useEffect(() => {
+    const analyzeNoteContent = async () => {
+      if (content.length > 10) {
+        const contentAnalysis = await analyzeContent(content);
+        setAnalysis(contentAnalysis);
+        setSuggestedTags(contentAnalysis.suggestedTags);
+        setCategory(contentAnalysis.category[0] || "");
+        
+        // Otomatik öncelik belirleme
+        if (!userSetPriority) {
+          setPriority(
+            contentAnalysis.importance > 0.7 ? "high" :
+            contentAnalysis.importance > 0.4 ? "medium" : "low"
+          );
+        }
+      }
+    };
+    analyzeNoteContent();
+  }, [content]);
+
   const handleSubmit = async () => {
     try {
       if (!title?.trim()) {
@@ -60,6 +95,7 @@ export function AddNoteDialog() {
         return
       }
 
+      const currentDate = new Date();
       const dueDate = time
         ? new Date(
             date.getFullYear(),
@@ -74,11 +110,19 @@ export function AddNoteDialog() {
         title: title.trim(),
         content: content.trim(),
         priority: priority || "medium",
-        date,
-        dueDate,
-        reminder,
+        created_at: currentDate.toISOString(),
+        updated_at: currentDate.toISOString(),
+        date: date.toISOString(),
+        time: format(date, 'HH:mm'),
+        dueDate: dueDate.toISOString(),
+        reminder: reminder,
         lastNotified: undefined,
-      }
+        category: category || "",
+        tags: selectedTags.join(",") || "",
+        isImportant: false,
+        isNotified: false,
+        status: "pending"
+      } as const;
 
       await addNote(note)
 
@@ -136,9 +180,10 @@ export function AddNoteDialog() {
           />
           <Select
             value={priority}
-            onValueChange={(value: "low" | "medium" | "high") =>
+            onValueChange={(value: "low" | "medium" | "high") => {
               setPriority(value)
-            }
+              setUserSetPriority(true)
+            }}
           >
             <SelectTrigger>
               <SelectValue placeholder="Öncelik" />
@@ -166,6 +211,42 @@ export function AddNoteDialog() {
               onChange={(e) => setTime(e.target.value)}
             />
           </div>
+          {analysis && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Kategori:</span>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kategori seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {analysis.category.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                {suggestedTags?.map(tag => (
+                  <Badge
+                    key={tag}
+                    variant={selectedTags.includes(tag) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setSelectedTags(prev => 
+                        prev.includes(tag) 
+                          ? prev.filter(t => t !== tag)
+                          : [...prev, tag]
+                      );
+                    }}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
           <Button
             className="w-full"
             onClick={handleSubmit}

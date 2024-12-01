@@ -6,6 +6,7 @@
 
 use rusqlite::{Connection, Result, params};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use lazy_static::lazy_static;
@@ -51,10 +52,12 @@ fn migrate_database() -> Result<(), String> {
             updated_at TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'pending',
             due_date TEXT,
-            reminder INTEGER DEFAULT 0,
+            reminder BOOLEAN DEFAULT FALSE,
             last_notified TEXT,
-            is_notified INTEGER DEFAULT 0,
-            is_important INTEGER DEFAULT 0
+            is_notified BOOLEAN DEFAULT FALSE,
+            is_important BOOLEAN DEFAULT FALSE,
+            category TEXT,
+            tags TEXT
         )",
         [],
     ).map_err(|e| e.to_string())?;
@@ -86,10 +89,12 @@ fn initialize_database() -> std::result::Result<(), Box<dyn std::error::Error>> 
             updated_at TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'pending',
             due_date TEXT,
-            reminder INTEGER DEFAULT 0,
+            reminder BOOLEAN DEFAULT FALSE,
             last_notified TEXT,
-            is_notified INTEGER DEFAULT 0,
-            is_important INTEGER DEFAULT 0
+            is_notified BOOLEAN DEFAULT FALSE,
+            is_important BOOLEAN DEFAULT FALSE,
+            category TEXT,
+            tags TEXT
         )",
         [],
     )?;
@@ -143,12 +148,14 @@ pub struct Note {
     pub time: String,
     pub created_at: String,
     pub updated_at: String,
-    pub reminder: Option<bool>,
-    pub status: Option<String>,
+    pub reminder: bool,
+    pub status: String,
     pub due_date: Option<String>,
     pub last_notified: Option<String>,
-    pub is_notified: Option<bool>,
-    pub is_important: Option<bool>
+    pub is_notified: bool,
+    pub is_important: bool,
+    pub category: String,
+    pub tags: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -255,17 +262,17 @@ async fn save_note(note: Note) -> Result<Note, String> {
         params![
             &note_clone.title,
             &note_clone.content,
-            &note_clone.priority.unwrap_or("medium".to_string()),
+            &note_clone.priority,
             &note_clone.date,
             &note_clone.time,
             &note_clone.created_at,
             &note_clone.updated_at,
             &note_clone.status,
             &note_clone.due_date,
-            &note_clone.reminder.unwrap_or(false),
+            &note_clone.reminder,
             &note_clone.last_notified,
-            &note_clone.is_notified.unwrap_or(false),
-            &note_clone.is_important.unwrap_or(false)
+            &note_clone.is_notified,
+            &note_clone.is_important
         ],
     ).map_err(|e| e.to_string())?;
 
@@ -300,13 +307,15 @@ async fn get_all_notes() -> Result<Vec<Note>, String> {
             time: row.get(4)?,
             created_at: row.get(5)?,
             updated_at: row.get(6)?,
-            reminder: Some(row.get::<_, i32>(7)? != 0),
+            reminder: row.get(7)?,
             status: row.get(8)?,
             due_date: row.get(9)?,
             last_notified: row.get(10)?,
-            is_notified: Some(row.get::<_, i32>(9)? != 0),
-            is_important: Some(row.get::<_, i32>(10)? != 0),
-            priority: Some(row.get::<_, String>(11)?)
+            is_notified: row.get(11)?,
+            is_important: row.get(12)?,
+            category: row.get(13)?,
+            tags: row.get(14)?,
+            priority: row.get(15)?
         })
     }).map_err(|e| e.to_string())?;
     
@@ -497,10 +506,46 @@ async fn update_tab(tab_data: TabData) -> Result<bool, String> {
     Ok(true)
 }
 
+#[derive(Serialize, Deserialize)]
+struct ContentAnalysis {
+    sentiment: String,
+    category: Vec<String>,
+    keywords: Vec<String>,
+    importance: f64,
+    suggested_tags: Vec<String>
+}
+
 #[tauri::command]
-async fn train_model(text: String) -> Result<(), String> {
+async fn analyze_content(text: String) -> Result<ContentAnalysis, String> {
+    let chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
+    
+    let sentiment = chain.analyze_sentiment(&text);
+    let category = chain.analyze_categories(&text);
+    let keywords = chain.extract_keywords(&text);
+    let importance = chain.analyze_importance(&text, &keywords);
+    let tags = chain.suggest_tags(&text);
+    
+    Ok(ContentAnalysis {
+        sentiment,
+        category,
+        keywords,
+        importance,
+        suggested_tags: tags
+    })
+}
+
+#[tauri::command]
+async fn train_model(text: String, metadata: Option<String>) -> Result<(), String> {
     let mut chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
-    chain.train(&text);
+    
+    if let Some(meta) = metadata {
+        let meta_data: Value = serde_json::from_str(&meta)
+            .map_err(|e| e.to_string())?;
+        chain.train_with_metadata(&text, &meta_data);
+    } else {
+        chain.train(&text);
+    }
+    
     Ok(())
 }
 
@@ -521,11 +566,129 @@ async fn update_note_notification(id: i32, is_notified: bool) -> Result<(), Stri
     let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     conn.execute(
-        "UPDATE notes SET is_notified = ?1 WHERE id = ?2",
-        [is_notified as i32, id],
+        "UPDATE notes SET is_notified = ?1, last_notified = ?2 WHERE id = ?3",
+        params![
+            is_notified as i32,
+            chrono::Local::now().to_rfc3339(),
+            id
+        ],
     ).map_err(|e| e.to_string())?;
     
     Ok(())
+}
+
+#[derive(Serialize)]
+struct SearchAnalysis {
+    semantic_matches: Vec<SemanticMatch>,
+    suggested_filters: SuggestedFilters,
+}
+
+#[derive(Serialize)]
+struct SemanticMatch {
+    note_id: String,
+    relevance: f64,
+    matched_terms: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct SuggestedFilters {
+    category: Option<Vec<String>>,
+    priority: Option<Vec<String>>,
+    date_range: Option<DateRange>,
+}
+
+#[derive(Serialize)]
+struct DateRange {
+    start: String,
+    end: String,
+}
+
+#[tauri::command]
+async fn semantic_search(query: String, notes: String) -> Result<SearchAnalysis, String> {
+    let chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
+    let notes: Vec<Value> = serde_json::from_str(&notes).map_err(|e| e.to_string())?;
+    
+    let query_words: Vec<String> = query
+        .split_whitespace()
+        .map(|s| s.to_lowercase())
+        .collect();
+        
+    let mut matches = Vec::new();
+    
+    for note in notes.iter() {
+        let content = note["content"].as_str().unwrap_or("");
+        let note_words: Vec<String> = content
+            .split_whitespace()
+            .map(|s| s.to_lowercase())
+            .collect();
+            
+        let relevance = chain.calculate_semantic_relevance(&query_words, &note_words);
+        
+        if relevance > 0.3 {
+            matches.push(SemanticMatch {
+                note_id: note["id"].as_str().unwrap_or("").to_string(),
+                relevance,
+                matched_terms: chain.find_matched_terms(&query_words, &note_words),
+            });
+        }
+    }
+    
+    matches.sort_by(|a, b| b.relevance.partial_cmp(&a.relevance).unwrap());
+    
+    let filters = chain.suggest_filters(&query, &notes);
+    
+    Ok(SearchAnalysis {
+        semantic_matches: matches,
+        suggested_filters: filters,
+    })
+}
+
+#[tauri::command]
+async fn analyze_search_query(query: String) -> Result<Value, String> {
+    let chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
+    Ok(chain.analyze_query(&query))
+}
+
+#[tauri::command]
+async fn add_note(note: SQLiteNote) -> Result<i64, String> {
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
+    
+    conn.execute(
+        "INSERT INTO notes (
+            title, content, priority, date, time, status,
+            due_date, reminder, last_notified, is_important,
+            is_notified, category, tags, created_at, updated_at
+        ) VALUES (
+            ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15
+        )",
+        params![
+            note.title, note.content, note.priority, note.date, note.time,
+            note.status, note.due_date, note.reminder, note.last_notified,
+            note.is_important, note.is_notified, note.category, note.tags,
+            note.created_at, note.updated_at
+        ],
+    ).map_err(|e| e.to_string())?;
+    
+    Ok(conn.last_insert_rowid())
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SQLiteNote {
+    title: String,
+    content: String,
+    priority: String,
+    date: String,
+    time: String,
+    status: String,
+    due_date: Option<String>,
+    reminder: bool,
+    last_notified: Option<String>,
+    is_important: bool,
+    is_notified: bool,
+    category: String,
+    tags: String,
+    created_at: String,
+    updated_at: String
 }
 
 fn main() {
@@ -549,7 +712,11 @@ fn main() {
             train_model,
             generate_text,
             analyze_importance,
-            update_note_notification
+            update_note_notification,
+            analyze_content,
+            semantic_search,
+            analyze_search_query,
+            add_note
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

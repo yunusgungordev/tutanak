@@ -27,8 +27,11 @@ export function NotificationBell() {
     const isNotExpired = !isAfter(now, addDays(dueDate, 1))
     const canNotify = !note.lastNotified || isAfter(now, addHours(note.lastNotified, 1))
 
+    const isAIImportant = note.isImportant
+    const hasReminder = note.reminder
+
     return (
-      (note.priority === "high" || note.reminder || note.isImportant) &&
+      (isAIImportant || hasReminder) &&
       (isUpcoming || isSameDay) &&
       canNotify &&
       !note.isNotified

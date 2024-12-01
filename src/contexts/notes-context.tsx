@@ -1,35 +1,45 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { invoke } from "@tauri-apps/api/tauri"
 import { format, startOfDay } from "date-fns"
-import { generateSimilarText, trainAIModel } from "@/lib/ai-helper"
+import { generateSimilarText, trainAIModel, analyzeContent } from "@/lib/ai-helper"
+import { TimelineNote } from "@/types"
 
 interface Note {
     id: string | null;
     title: string;
     content: string;
+    priority: string;
+    date: string;
+    time: string;
     created_at: string;
     updated_at: string;
-    reminder?: boolean;
-    status?: string;
+    status: string;
     due_date?: string;
+    reminder: boolean;
     last_notified?: string;
-    is_notified?: boolean;
-    is_important?: boolean;
-    priority?: string;
+    is_important: boolean;
+    is_notified: boolean;
+    category: string;
+    tags: string;
 }
 
-interface TimelineNote {
-  id: string
-  title: string
-  content: string
-  date: Date
-  priority: "low" | "medium" | "high"
-  status: "pending" | "completed" | "overdue"
-  dueDate?: Date
-  reminder?: boolean
-  lastNotified?: Date
-  isImportant?: boolean
-  isNotified?: boolean
+interface SQLiteNote {
+  id: number;
+  title: string;
+  content: string;
+  priority: string;
+  date: string;
+  time: string;
+  status: string;
+  due_date: string | null;
+  reminder: boolean;
+  last_notified: string | null;
+  is_important: boolean;
+  is_notified: boolean;
+  category: string;
+  tags: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface NotesContextType {
@@ -50,24 +60,32 @@ const NotesContext = createContext<NotesContextType | undefined>(undefined)
 export function NotesProvider({ children }: { children: React.ReactNode }) {
   const [notes, setNotes] = useState<TimelineNote[]>([])
   const [searchResults, setSearchResults] = useState<TimelineNote[]>([])
+  const [categories, setCategories] = useState<string[]>([])
+  const [tags, setTags] = useState<string[]>([])
 
   useEffect(() => {
     const loadNotes = async () => {
       try {
-        const result = await invoke<Note[]>('get_all_notes');
+        const result = await invoke<SQLiteNote[]>('get_all_notes');
+        
         const timelineNotes = result.map(note => ({
-            id: note.id?.toString() || crypto.randomUUID(),
-            title: note.title,
-            content: note.content,
-            date: new Date(note.created_at),
-            priority: note.priority as "low" | "medium" | "high",
-            status: (note.status as TimelineNote["status"]) || "pending",
-            dueDate: note.due_date ? new Date(note.due_date) : undefined,
-            reminder: note.reminder,
-            lastNotified: note.last_notified ? new Date(note.last_notified) : undefined,
-            isImportant: note.is_important,
-            isNotified: note.is_notified
+          id: note.id.toString(),
+          title: note.title,
+          content: note.content,
+          date: note.date,
+          priority: note.priority as "low" | "medium" | "high",
+          status: note.status as TimelineNote["status"],
+          dueDate: note.due_date || undefined,
+          reminder: note.reminder,
+          lastNotified: note.last_notified || undefined,
+          isImportant: note.is_important,
+          isNotified: note.is_notified,
+          category: note.category,
+          tags: note.tags,
+          created_at: note.created_at,
+          updated_at: note.updated_at
         }));
+        
         setNotes(timelineNotes);
       } catch (error) {
         console.error('Notlar yüklenirken hata:', error);
@@ -80,77 +98,59 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   const addNote = async (note: Omit<TimelineNote, "id" | "status">) => {
     try {
-      if (!note.title?.trim() || !note.content?.trim()) {
-        throw new Error("Başlık ve içerik alanları zorunludur")
-      }
-
-      const isImportant = await checkImportantContent(note.content)
-      console.log("Not önemli mi:", isImportant)
-
-      const noteData = {
-        id: null,
-        title: note.title.trim(),
-        content: note.content.trim(),
-        priority: note.priority || "medium",
-        date: format(note.date, "yyyy-MM-dd"),
-        time: note.dueDate ? format(note.dueDate, "HH:mm") : "00:00",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+      const isImportant = await checkImportantContent(note.content);
+      
+      const sqlNote: SQLiteNote = {
+        id: 0,
+        title: note.title,
+        content: note.content,
+        priority: note.priority,
+        date: note.date,
+        time: format(new Date(note.date), 'HH:mm'),
+        created_at: note.created_at,
+        updated_at: note.updated_at,
         status: "pending",
-        due_date: note.dueDate?.toISOString() || null,
+        due_date: note.dueDate || null,
         reminder: note.reminder || false,
-        last_notified: note.lastNotified?.toISOString() || null,
+        last_notified: note.lastNotified || null,
         is_important: isImportant,
-        is_notified: false
-      }
+        is_notified: false,
+        category: note.category || "genel",
+        tags: note.tags || "",
+      };
 
-      const savedNote = await invoke<{
-        id: number;
-        title: string;
-        content: string;
-        priority: string;
-        date: string;
-        time: string;
-        status: string;
-        due_date: string | null;
-        reminder: number;
-        last_notified: string | null;
-        is_important: number;
-        is_notified: number;
-      }>("save_note", { note: noteData })
-
-      if (!savedNote?.id) {
-        throw new Error("Not kaydedilirken beklenmeyen bir hata oluştu")
-      }
-
+      const savedNote = await invoke<Note>("save_note", { 
+        note: sqlNote
+      });
+      
       const timelineNote: TimelineNote = {
-        id: savedNote.id.toString(),
+        id: savedNote.id?.toString() || crypto.randomUUID(),
         title: savedNote.title,
         content: savedNote.content,
-        date: new Date(savedNote.date),
         priority: savedNote.priority as "low" | "medium" | "high",
+        date: savedNote.date,
         status: "pending",
-        dueDate: savedNote.due_date ? new Date(savedNote.due_date) : undefined,
+        dueDate: savedNote.due_date || undefined,
         reminder: Boolean(savedNote.reminder),
-        lastNotified: savedNote.last_notified ? new Date(savedNote.last_notified) : undefined,
+        lastNotified: savedNote.last_notified || undefined,
         isImportant: Boolean(savedNote.is_important),
-        isNotified: Boolean(savedNote.is_notified)
-      }
+        isNotified: Boolean(savedNote.is_notified),
+        category: savedNote.category || "",
+        tags: savedNote.tags || "",
+        created_at: savedNote.created_at,
+        updated_at: savedNote.updated_at
+      };
 
-      setNotes((prev) =>
-        [timelineNote, ...prev].sort(
-          (a, b) => b.date.getTime() - a.date.getTime()
-        )
-      )
+      setNotes(prev => [timelineNote, ...prev].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      ));
 
-      await trainAIModel(note.content)
-      return timelineNote
-
+      return timelineNote;
     } catch (error) {
-      console.error("Not ekleme hatası:", error)
-      throw error instanceof Error ? error : new Error("Bilinmeyen bir hata oluştu")
+      console.error("Not ekleme hatası:", error);
+      throw error;
     }
-  }
+  };
 
   const updateNoteStatus = (id: string, status: TimelineNote["status"]) => {
     setNotes((prev) =>
@@ -165,25 +165,34 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   const updateNoteLastNotified = (id: string) => {
     setNotes((prev) =>
       prev.map((note) =>
-        note.id === id ? { ...note, lastNotified: new Date() } : note
+        note.id === id ? { ...note, lastNotified: new Date().toISOString() } : note
       )
     )
   }
 
-  const searchNotes = (query: string, dateFilteredNotes?: TimelineNote[]) => {
-    if (!query.trim()) {
-      setSearchResults([])
-      return
+  const searchNotes = async (query: string, dateFilteredNotes?: TimelineNote[]) => {
+    try {
+      const analysis = await analyzeContent(query);
+      const notesToSearch = dateFilteredNotes || notes;
+      
+      const results = notesToSearch.filter(note => {
+        const contentMatch = note.content.toLowerCase().includes(query.toLowerCase());
+        const titleMatch = note.title.toLowerCase().includes(query.toLowerCase());
+        const categoryMatch = analysis.category.some(cat => 
+          note.category?.toLowerCase() === cat.toLowerCase()
+        );
+        const tagMatch = analysis.suggestedTags.some(tag => 
+          note.tags?.includes(tag)
+        );
+        
+        return contentMatch || titleMatch || categoryMatch || tagMatch;
+      });
+      
+      setSearchResults(results);
+    } catch (error) {
+      console.error("Arama hatası:", error);
+      setSearchResults([]);
     }
-
-    const notesToSearch = dateFilteredNotes || notes
-
-    const results = notesToSearch.filter((note) => {
-      const searchableContent = `${note.title} ${note.content}`.toLowerCase()
-      return searchableContent.includes(query.toLowerCase())
-    })
-
-    setSearchResults(results)
   }
 
   useEffect(() => {
@@ -192,7 +201,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
       setNotes((prev) =>
         prev.map((note) => {
           if (note.dueDate && note.status === "pending") {
-            if (startOfDay(note.dueDate) < startOfDay(now)) {
+            if (startOfDay(new Date(note.dueDate)) < startOfDay(now)) {
               return { ...note, status: "overdue" }
             }
           }
@@ -247,7 +256,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         keywords: importantKeywords 
       })
       
-      return result > 0.5 // Önem skoru 0.5'ten büy��kse önemli kabul et
+      return result > 0.5 // Önem skoru 0.5'ten büyükse önemli kabul et
     } catch (error) {
       console.error("İçerik analizi hatası:", error)
       return false
