@@ -152,22 +152,51 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateNoteStatus = (id: string, status: TimelineNote["status"]) => {
-    setNotes((prev) =>
-      prev.map((note) => (note.id === id ? { ...note, status } : note))
-    )
+  const updateNoteStatus = async (id: string, status: TimelineNote["status"]) => {
+    try {
+      await invoke("update_note_status", { 
+        id: parseInt(id), 
+        status 
+      });
+      
+      setNotes((prev) =>
+        prev.map((note) => (note.id === id ? { ...note, status } : note))
+      );
+    } catch (error) {
+      console.error("Not durumu güncellenirken hata:", error);
+    }
   }
 
-  const deleteNote = (id: string) => {
-    setNotes((prev) => prev.filter((note) => note.id !== id))
+  const deleteNote = async (id: string) => {
+    try {
+      await invoke("delete_note", { id: parseInt(id) });
+      setNotes((prev) => prev.filter((note) => note.id !== id));
+    } catch (error) {
+      console.error("Not silinirken hata:", error);
+    }
   }
 
-  const updateNoteLastNotified = (id: string) => {
-    setNotes((prev) =>
-      prev.map((note) =>
-        note.id === id ? { ...note, lastNotified: new Date().toISOString() } : note
-      )
-    )
+  const updateNoteLastNotified = async (id: string) => {
+    try {
+      const lastNotified = new Date().toISOString();
+      await invoke("update_note_notification", { 
+        id: parseInt(id),
+        lastNotified,
+        isNotified: true
+      });
+      
+      setNotes((prev) =>
+        prev.map((note) =>
+          note.id === id ? { 
+            ...note, 
+            lastNotified,
+            isNotified: true 
+          } : note
+        )
+      );
+    } catch (error) {
+      console.error("Not bildirimi güncellenirken hata:", error);
+    }
   }
 
   const searchNotes = async (query: string, dateFilteredNotes?: TimelineNote[]) => {

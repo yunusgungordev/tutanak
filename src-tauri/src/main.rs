@@ -291,31 +291,32 @@ async fn get_all_notes() -> Result<Vec<Note>, String> {
     let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     let mut stmt = conn.prepare(
-        "SELECT id, title, content, created_at, updated_at, 
-         CAST(reminder as BOOLEAN) as reminder, status, due_date, last_notified, 
-         CAST(is_notified as BOOLEAN) as is_notified, 
-         CAST(is_important as BOOLEAN) as is_important 
+        "SELECT id, title, content, priority, date, time, status, 
+         due_date, reminder, last_notified, is_notified, is_important,
+         COALESCE(category, '') as category, 
+         COALESCE(tags, '') as tags, 
+         created_at, updated_at 
          FROM notes ORDER BY created_at DESC"
     ).map_err(|e| e.to_string())?;
     
     let notes = stmt.query_map([], |row| {
         Ok(Note {
-            id: row.get(0)?,
+            id: Some(row.get(0)?),
             title: row.get(1)?,
             content: row.get(2)?,
-            date: row.get(3)?,
-            time: row.get(4)?,
-            created_at: row.get(5)?,
-            updated_at: row.get(6)?,
-            reminder: row.get(7)?,
-            status: row.get(8)?,
-            due_date: row.get(9)?,
-            last_notified: row.get(10)?,
-            is_notified: row.get(11)?,
-            is_important: row.get(12)?,
-            category: row.get(13)?,
-            tags: row.get(14)?,
-            priority: row.get(15)?
+            priority: Some(row.get(3)?),
+            date: row.get(4)?,
+            time: row.get(5)?,
+            status: row.get(6)?,
+            due_date: row.get(7)?,
+            reminder: row.get::<_, i32>(8)? != 0,
+            last_notified: row.get(9)?,
+            is_notified: row.get::<_, i32>(10)? != 0,
+            is_important: row.get::<_, i32>(11)? != 0,
+            category: row.get(12)?,
+            tags: row.get(13)?,
+            created_at: row.get(14)?,
+            updated_at: row.get(15)?
         })
     }).map_err(|e| e.to_string())?;
     
@@ -561,22 +562,6 @@ async fn analyze_importance(text: String, keywords: Vec<String>) -> Result<f64, 
     Ok(chain.analyze_importance(&text, &keywords))
 }
 
-#[tauri::command]
-async fn update_note_notification(id: i32, is_notified: bool) -> Result<(), String> {
-    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
-    
-    conn.execute(
-        "UPDATE notes SET is_notified = ?1, last_notified = ?2 WHERE id = ?3",
-        params![
-            is_notified as i32,
-            chrono::Local::now().to_rfc3339(),
-            id
-        ],
-    ).map_err(|e| e.to_string())?;
-    
-    Ok(())
-}
-
 #[derive(Serialize)]
 struct SearchAnalysis {
     semantic_matches: Vec<SemanticMatch>,
@@ -691,6 +676,49 @@ struct SQLiteNote {
     updated_at: String
 }
 
+#[tauri::command]
+async fn update_note_status(id: i64, status: String) -> Result<(), String> {
+    let conn = Connection::open(get_db_path())
+        .map_err(|e| e.to_string())?;
+    
+    conn.execute(
+        "UPDATE notes SET status = ? WHERE id = ?",
+        params![status, id],
+    ).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn delete_note(id: i64) -> Result<(), String> {
+    let conn = Connection::open(get_db_path())
+        .map_err(|e| e.to_string())?;
+    
+    conn.execute(
+        "DELETE FROM notes WHERE id = ?",
+        params![id],
+    ).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn update_note_notification(
+    id: i64, 
+    last_notified: String,
+    is_notified: bool
+) -> Result<(), String> {
+    let conn = Connection::open(get_db_path())
+        .map_err(|e| e.to_string())?;
+    
+    conn.execute(
+        "UPDATE notes SET last_notified = ?, is_notified = ? WHERE id = ?",
+        params![last_notified, is_notified, id],
+    ).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
 fn main() {
     // Veritabanını başlat
     if let Err(e) = initialize_database() {
@@ -716,7 +744,10 @@ fn main() {
             analyze_content,
             semantic_search,
             analyze_search_query,
-            add_note
+            add_note,
+            update_note_status,
+            delete_note,
+            update_note_notification
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
