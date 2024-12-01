@@ -94,7 +94,9 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
     const loadTabs = async () => {
       try {
         const savedTabs = (await invoke("get_tabs")) as any[]
-        console.log("Loaded tabs from DB:", savedTabs)
+        if (savedTabs.length > 0) {
+          console.log("Yüklenen tablar:", savedTabs)
+        }
 
         const dynamicTabs = savedTabs.map((tab) => {
           let layout: LayoutConfig[] = []

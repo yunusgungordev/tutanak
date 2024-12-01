@@ -44,7 +44,7 @@ fn migrate_database() -> Result<(), String> {
             id INTEGER PRIMARY KEY,
             title TEXT NOT NULL,
             content TEXT NOT NULL,
-            priority TEXT NOT NULL,
+            priority TEXT NOT NULL DEFAULT 'medium',
             date TEXT NOT NULL,
             time TEXT NOT NULL,
             created_at TEXT NOT NULL,
@@ -79,7 +79,7 @@ fn initialize_database() -> std::result::Result<(), Box<dyn std::error::Error>> 
             id INTEGER PRIMARY KEY,
             title TEXT NOT NULL,
             content TEXT NOT NULL,
-            priority TEXT NOT NULL,
+            priority TEXT NOT NULL DEFAULT 'medium',
             date TEXT NOT NULL,
             time TEXT NOT NULL,
             created_at TEXT NOT NULL,
@@ -138,6 +138,9 @@ pub struct Note {
     pub id: Option<i64>,
     pub title: String,
     pub content: String,
+    pub priority: Option<String>,
+    pub date: String,
+    pub time: String,
     pub created_at: String,
     pub updated_at: String,
     pub reminder: Option<bool>,
@@ -245,13 +248,16 @@ async fn save_note(note: Note) -> Result<Note, String> {
     
     conn.execute(
         "INSERT INTO notes (
-            title, content, created_at, updated_at, 
+            title, content, priority, date, time, created_at, updated_at, 
             status, due_date, reminder, last_notified, 
             is_notified, is_important
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         params![
             &note_clone.title,
             &note_clone.content,
+            &note_clone.priority.unwrap_or("medium".to_string()),
+            &note_clone.date,
+            &note_clone.time,
             &note_clone.created_at,
             &note_clone.updated_at,
             &note_clone.status,
@@ -290,14 +296,17 @@ async fn get_all_notes() -> Result<Vec<Note>, String> {
             id: row.get(0)?,
             title: row.get(1)?,
             content: row.get(2)?,
-            created_at: row.get(3)?,
-            updated_at: row.get(4)?,
-            reminder: Some(row.get::<_, i32>(5)? != 0),
-            status: row.get(6)?,
-            due_date: row.get(7)?,
-            last_notified: row.get(8)?,
+            date: row.get(3)?,
+            time: row.get(4)?,
+            created_at: row.get(5)?,
+            updated_at: row.get(6)?,
+            reminder: Some(row.get::<_, i32>(7)? != 0),
+            status: row.get(8)?,
+            due_date: row.get(9)?,
+            last_notified: row.get(10)?,
             is_notified: Some(row.get::<_, i32>(9)? != 0),
-            is_important: Some(row.get::<_, i32>(10)? != 0)
+            is_important: Some(row.get::<_, i32>(10)? != 0),
+            priority: Some(row.get::<_, String>(11)?)
         })
     }).map_err(|e| e.to_string())?;
     

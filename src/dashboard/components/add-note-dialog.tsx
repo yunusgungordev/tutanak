@@ -29,7 +29,7 @@ export function AddNoteDialog() {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
-  const [priority, setPriority] = useState<"low" | "medium" | "high">("low")
+  const [priority, setPriority] = useState<"low" | "medium" | "high">("medium")
   const [date, setDate] = useState<Date>(new Date())
   const [time, setTime] = useState("")
   const [reminder, setReminder] = useState(false)
@@ -73,7 +73,7 @@ export function AddNoteDialog() {
       const note = {
         title: title.trim(),
         content: content.trim(),
-        priority,
+        priority: priority || "medium",
         date,
         dueDate,
         reminder,
@@ -169,7 +169,7 @@ export function AddNoteDialog() {
           <Button
             className="w-full"
             onClick={handleSubmit}
-            disabled={!title || !content || !priority || !date}
+            disabled={!title || !content || !date}
           >
             Kaydet
           </Button>

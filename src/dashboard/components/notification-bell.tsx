@@ -16,7 +16,6 @@ export function NotificationBell() {
 
   const importantNotifications = notes.filter((note) => {
     if (!note.dueDate || note.status === "completed") {
-      console.log("Not elendi - dueDate yok veya completed:", note)
       return false
     }
 
@@ -26,19 +25,6 @@ export function NotificationBell() {
     const isSameDay = startOfDay(now).getTime() === startOfDay(dueDate).getTime()
     const isUpcoming = isBefore(now, dueDate)
     const isNotExpired = !isAfter(now, addDays(dueDate, 1))
-
-    console.log("Not durumu:", {
-      id: note.id,
-      title: note.title,
-      dueDate: note.dueDate,
-      isSameDay,
-      isUpcoming,
-      isNotExpired,
-      isNotified: note.isNotified,
-      canNotify: !note.lastNotified || isAfter(now, addHours(note.lastNotified, 1)),
-      hasImportantContent: note.isImportant
-    })
-    
     const canNotify = !note.lastNotified || isAfter(now, addHours(note.lastNotified, 1))
 
     return (

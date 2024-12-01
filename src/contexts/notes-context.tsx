@@ -15,6 +15,7 @@ interface Note {
     last_notified?: string;
     is_notified?: boolean;
     is_important?: boolean;
+    priority?: string;
 }
 
 interface TimelineNote {
@@ -59,7 +60,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             title: note.title,
             content: note.content,
             date: new Date(note.created_at),
-            priority: "medium" as const,
+            priority: note.priority as "low" | "medium" | "high",
             status: (note.status as TimelineNote["status"]) || "pending",
             dueDate: note.due_date ? new Date(note.due_date) : undefined,
             reminder: note.reminder,
@@ -90,14 +91,14 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         id: null,
         title: note.title.trim(),
         content: note.content.trim(),
-        priority: note.priority,
+        priority: note.priority || "medium",
         date: format(note.date, "yyyy-MM-dd"),
         time: note.dueDate ? format(note.dueDate, "HH:mm") : "00:00",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         status: "pending",
         due_date: note.dueDate?.toISOString() || null,
-        reminder: note.reminder,
+        reminder: note.reminder || false,
         last_notified: note.lastNotified?.toISOString() || null,
         is_important: isImportant,
         is_notified: false
@@ -246,7 +247,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         keywords: importantKeywords 
       })
       
-      return result > 0.5 // Önem skoru 0.5'ten büyükse önemli kabul et
+      return result > 0.5 // Önem skoru 0.5'ten büy��kse önemli kabul et
     } catch (error) {
       console.error("İçerik analizi hatası:", error)
       return false
