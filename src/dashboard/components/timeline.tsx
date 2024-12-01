@@ -483,17 +483,6 @@ export function Timeline() {
           ))}
         </motion.div>
       </div>
-
-      {isMinimized && (
-        <Button
-          variant="outline"
-          size="icon"
-          className="fixed bottom-4 right-4 h-10 w-10 rounded-full shadow-lg hover:bg-accent"
-          onClick={() => setIsMinimized(false)}
-        >
-          <Maximize2 className="h-4 w-4" />
-        </Button>
-      )}
     </div>
   )
 }
