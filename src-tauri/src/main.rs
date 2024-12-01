@@ -11,7 +11,6 @@ use std::sync::Mutex;
 use lazy_static::lazy_static;
 mod markov;
 use markov::MarkovChain;
-use rand;
 
 lazy_static! {
     static ref MARKOV_CHAIN: Mutex<MarkovChain> = Mutex::new(MarkovChain::new(2));
@@ -263,7 +262,7 @@ async fn save_note(note: Note) -> Result<Note, String> {
     
     let mut conn = Connection::open(&db_path).map_err(|e| {
         println!("Veritabanı bağlantı hatası: {}", e);
-        format!("Veritabanı bağlant�� hatası: {}", e)
+        format!("Veritabanı bağlant hatası: {}", e)
     })?;
     
     // Notes tablosunu kontrol et ve oluştur
@@ -584,6 +583,12 @@ async fn generate_text(start: String, length: usize) -> Result<String, String> {
     Ok(chain.generate(&start, length))
 }
 
+#[tauri::command]
+async fn analyze_importance(text: String, keywords: Vec<String>) -> Result<f64, String> {
+    let chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
+    Ok(chain.analyze_importance(&text, &keywords))
+}
+
 fn main() {
     // Veritabanını başlat
     if let Err(e) = initialize_database() {
@@ -603,7 +608,8 @@ fn main() {
             update_tab,
             init_database,
             train_model,
-            generate_text
+            generate_text,
+            analyze_importance
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
