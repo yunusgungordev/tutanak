@@ -24,7 +24,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 import { Badge } from "@/components/ui/badge"
-import { analyzeContent } from "@/lib/ai-helper"
+import { analyzeContent, trainAIModel } from "@/lib/ai-helper"
 
 interface ContentAnalysis {
   sentiment: 'positive' | 'negative' | 'neutral';
@@ -125,6 +125,12 @@ export function AddNoteDialog() {
       } as const;
 
       await addNote(note)
+
+      // Modeli eğit
+      await trainAIModel(content, {
+        category: [category],
+        tags: selectedTags
+      });
 
       // Form alanlarını temizle
       setTitle("")

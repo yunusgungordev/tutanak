@@ -139,6 +139,27 @@ impl MarkovChain {
 
     pub fn train_with_metadata(&mut self, text: &str, metadata: &Value) {
         self.train(text);
+        
+        // Kategori ve etiketlerden öğrenme
+        if let Some(category) = metadata.get("category") {
+            if let Some(categories) = category.as_array() {
+                for cat in categories {
+                    if let Some(cat_str) = cat.as_str() {
+                        self.train(&format!("kategori: {}", cat_str));
+                    }
+                }
+            }
+        }
+        
+        if let Some(tags) = metadata.get("tags") {
+            if let Some(tag_array) = tags.as_array() {
+                for tag in tag_array {
+                    if let Some(tag_str) = tag.as_str() {
+                        self.train(&format!("etiket: {}", tag_str));
+                    }
+                }
+            }
+        }
     }
 
     pub fn find_semantic_matches(&self, query: &str, notes: &[Value]) -> Vec<SemanticMatch> {

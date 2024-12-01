@@ -195,7 +195,6 @@ export function Timeline() {
       if (queryAnalysis.type === 'date') {
         handleDateSearch(new Date(queryAnalysis.value));
       } else {
-        // Not verilerini hazırla
         const notesForSearch = notes.map(note => ({
           ...note,
           isNotified: note.isNotified ?? false,
@@ -207,12 +206,11 @@ export function Timeline() {
 
         const searchAnalysis = await semanticSearch(value, notesForSearch);
         
-        if (searchAnalysis.semanticMatches.length > 0) {
-          // Eşleşen notları bul ve orijinal not objelerini kullan
+        if (searchAnalysis?.semanticMatches?.length > 0) {
           const matchedNotes = filterNotes(
             notes.filter(note => 
               searchAnalysis.semanticMatches.some(match => 
-                match.noteId === note.id
+                match.noteId === note.id && match.relevance > 0.3
               )
             )
           ).sort((a, b) => {
@@ -220,13 +218,13 @@ export function Timeline() {
             const bMatch = searchAnalysis.semanticMatches.find(m => m.noteId === b.id);
             return (bMatch?.relevance || 0) - (aMatch?.relevance || 0);
           });
-          
-          setSearchResults(matchedNotes as TimelineNote[]);
+
+          setSearchResults(matchedNotes);
           
           if (searchAnalysis.suggestedFilters) {
             setActiveFilters({
               categories: searchAnalysis.suggestedFilters.category || [],
-              priorities: (searchAnalysis.suggestedFilters.priority || []) as ("low" | "medium" | "high")[],
+              priorities: searchAnalysis.suggestedFilters.priority || [],
               dateRange: {
                 start: searchAnalysis.suggestedFilters.dateRange?.start ? 
                   new Date(searchAnalysis.suggestedFilters.dateRange.start) : null,

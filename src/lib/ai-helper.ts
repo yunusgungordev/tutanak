@@ -83,7 +83,33 @@ export async function semanticSearch(
   notes: SearchableNote[]
 ): Promise<SearchAnalysis> {
   try {
-    return await invoke('semantic_search', { query, notes });
+    const queryPhrases = extractKeyPhrases(query);
+    
+    const matches = notes.map(note => {
+      const titleSimilarity = calculateTextSimilarity(query, note.title) * 1.5;
+      const contentSimilarity = calculateTextSimilarity(query, note.content);
+      const phraseSimilarity = queryPhrases.reduce((acc, phrase) => {
+        return acc + (note.content.toLowerCase().includes(phrase) ? 0.5 : 0);
+      }, 0);
+      
+      const relevance = titleSimilarity + contentSimilarity + phraseSimilarity;
+      
+      return {
+        noteId: note.id,
+        relevance: relevance,
+        matchedTerms: query.toLowerCase().split(/\s+/).filter(term => 
+          note.title.toLowerCase().includes(term) || 
+          note.content.toLowerCase().includes(term)
+        )
+      };
+    }).filter(match => match.relevance > 0.2);
+
+    matches.sort((a, b) => b.relevance - a.relevance);
+
+    return {
+      semanticMatches: matches,
+      suggestedFilters: await generateSearchFilters(query, notes)
+    };
   } catch (error) {
     console.error('Semantik arama hatası:', error);
     return { semanticMatches: [], suggestedFilters: {} };
@@ -100,4 +126,52 @@ export async function analyzeSearchQuery(query: string): Promise<{
     console.error('Sorgu analizi hatası:', error);
     return { type: 'text', value: query };
   }
+}
+
+const calculateTextSimilarity = (text1: string, text2: string): number => {
+  const words1 = text1.toLowerCase().split(/\s+/);
+  const words2 = text2.toLowerCase().split(/\s+/);
+  
+  const intersection = words1.filter(word => words2.includes(word));
+  const union = [...new Set([...words1, ...words2])];
+  
+  return intersection.length / union.length;
+}
+
+const extractKeyPhrases = (text: string): string[] => {
+  const words = text.toLowerCase().split(/\s+/);
+  const phrases: string[] = [];
+  
+  for (let i = 0; i < words.length - 1; i++) {
+    phrases.push(`${words[i]} ${words[i + 1]}`);
+  }
+  
+  return phrases;
+}
+
+async function generateSearchFilters(query: string, notes: SearchableNote[]) {
+  const queryTerms = query.toLowerCase().split(/\s+/);
+  
+  const categories = new Set<string>();
+  const priorities = new Set<"low" | "medium" | "high">();
+  let dateStart: Date | undefined;
+  let dateEnd: Date | undefined;
+
+  notes.forEach(note => {
+    if (note.category) categories.add(note.category);
+    if (note.priority) priorities.add(note.priority);
+    const noteDate = new Date(note.date);
+    
+    if (!dateStart || noteDate < dateStart) dateStart = noteDate;
+    if (!dateEnd || noteDate > dateEnd) dateEnd = noteDate;
+  });
+
+  return {
+    category: Array.from(categories),
+    priority: Array.from(priorities),
+    dateRange: dateStart && dateEnd ? {
+      start: dateStart.toISOString(),
+      end: dateEnd.toISOString()
+    } : undefined
+  };
 } 
