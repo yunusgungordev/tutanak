@@ -17,8 +17,12 @@ export function NotificationBell() {
     const canNotify =
       !note.lastNotified || isAfter(now, addHours(note.lastNotified, 1))
 
+    const hasImportantContent = note.isImportant
+
     return (
-      (note.priority === "high" || note.reminder) && isUpcoming && canNotify
+      ((note.priority === "high" || note.reminder || hasImportantContent)) &&
+      isUpcoming &&
+      canNotify
     )
   })
 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { invoke } from "@tauri-apps/api/tauri"
 import { format, startOfDay } from "date-fns"
+import { generateSimilarText, trainAIModel } from "@/lib/ai-helper"
 
 interface TimelineNote {
   id: string
@@ -12,6 +13,7 @@ interface TimelineNote {
   dueDate?: Date
   reminder?: boolean
   lastNotified?: Date
+  isImportant?: boolean
 }
 
 interface NotesContextType {
@@ -23,6 +25,8 @@ interface NotesContextType {
   deleteNote: (id: string) => void
   updateNoteLastNotified: (id: string) => void
   searchNotes: (query: string, dateFilteredNotes?: TimelineNote[]) => void
+  getSuggestions: (text: string) => Promise<string>
+  checkImportantContent: (content: string) => Promise<boolean>
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined)
@@ -35,6 +39,9 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     const loadNotes = async () => {
       try {
         const dbNotes = await invoke<TimelineNote[]>("get_notes")
+        for (const note of dbNotes) {
+          await trainAIModel(note.content)
+        }
         const timelineNotes: TimelineNote[] = dbNotes.map((note) => {
           const [year, month, day] = note.date.toString().split("-").map(Number)
           const localDate = new Date(year, month - 1, day)
@@ -51,6 +58,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
             lastNotified: note.lastNotified
               ? new Date(note.lastNotified)
               : undefined,
+            isImportant: note.isImportant,
           }
         })
         setNotes(timelineNotes)
@@ -69,6 +77,9 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Başlık ve içerik alanları zorunludur")
       }
 
+      // İçerik önem analizi
+      const isImportant = await checkImportantContent(note.content)
+      
       const noteData = {
         id: null,
         title: note.title.trim(),
@@ -82,6 +93,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         due_date: note.dueDate?.toISOString(),
         reminder: note.reminder ?? false,
         last_notified: note.lastNotified?.toISOString(),
+        isImportant,
       }
 
       const savedNote = await invoke<any>("save_note", {
@@ -109,6 +121,7 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         lastNotified: savedNote.last_notified
           ? new Date(savedNote.last_notified)
           : undefined,
+        isImportant: savedNote.isImportant,
       }
 
       setNotes((prev) =>
@@ -116,6 +129,9 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
           (a, b) => b.date.getTime() - a.date.getTime()
         )
       )
+
+      // Yeni not ile modeli güncelle
+      await trainAIModel(note.content)
 
       return timelineNote
     } catch (error) {
@@ -180,6 +196,41 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval)
   }, [])
 
+  const getSuggestions = async (text: string) => {
+    try {
+      const suggestion = await generateSimilarText(text, 20)
+      return suggestion
+    } catch (error) {
+      console.error("Öneri alma hatası:", error)
+      return ""
+    }
+  }
+
+  const checkImportantContent = async (content: string) => {
+    try {
+      // Önemli kelimeleri içeren bir metin oluştur
+      const importantKeywords = [
+        "önemli",
+        "acil",
+        "hatırlat",
+        "unutma",
+        "kritik",
+        "kesinlikle",
+      ]
+      
+      // Markov modelini kullanarak metni analiz et
+      const result = await invoke<number>("analyze_importance", { 
+        text: content,
+        keywords: importantKeywords 
+      })
+      
+      return result > 0.5 // Önem skoru 0.5'ten büyükse önemli kabul et
+    } catch (error) {
+      console.error("İçerik analizi hatası:", error)
+      return false
+    }
+  }
+
   return (
     <NotesContext.Provider
       value={{
@@ -191,6 +242,8 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         deleteNote,
         updateNoteLastNotified,
         searchNotes,
+        getSuggestions,
+        checkImportantContent,
       }}
     >
       {children}

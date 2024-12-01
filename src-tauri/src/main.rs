@@ -7,6 +7,15 @@
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::Mutex;
+use lazy_static::lazy_static;
+mod markov;
+use markov::MarkovChain;
+use rand;
+
+lazy_static! {
+    static ref MARKOV_CHAIN: Mutex<MarkovChain> = Mutex::new(MarkovChain::new(2));
+}
 
 fn get_db_path() -> PathBuf {
     let app_data = std::env::var("APPDATA")
@@ -254,7 +263,7 @@ async fn save_note(note: Note) -> Result<Note, String> {
     
     let mut conn = Connection::open(&db_path).map_err(|e| {
         println!("Veritabanı bağlantı hatası: {}", e);
-        format!("Veritabanı bağlantı hatası: {}", e)
+        format!("Veritabanı bağlant�� hatası: {}", e)
     })?;
     
     // Notes tablosunu kontrol et ve oluştur
@@ -562,6 +571,19 @@ async fn update_tab(tab_data: TabData) -> Result<bool, String> {
     Ok(true)
 }
 
+#[tauri::command]
+async fn train_model(text: String) -> Result<(), String> {
+    let mut chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
+    chain.train(&text);
+    Ok(())
+}
+
+#[tauri::command]
+async fn generate_text(start: String, length: usize) -> Result<String, String> {
+    let chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
+    Ok(chain.generate(&start, length))
+}
+
 fn main() {
     // Veritabanını başlat
     if let Err(e) = initialize_database() {
@@ -579,7 +601,9 @@ fn main() {
             get_tabs,
             delete_tab,
             update_tab,
-            init_database
+            init_database,
+            train_model,
+            generate_text
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

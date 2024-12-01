@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useNotes } from "@/contexts/notes-context"
 import { invoke } from "@tauri-apps/api/tauri"
 import { format } from "date-fns"
@@ -25,7 +25,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
 
 export function AddNoteDialog() {
-  const { addNote } = useNotes()
+  const { addNote, getSuggestions } = useNotes()
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
@@ -34,6 +34,19 @@ export function AddNoteDialog() {
   const [time, setTime] = useState("")
   const [reminder, setReminder] = useState(false)
   const [error, setError] = useState("")
+  const [suggestions, setSuggestions] = useState<string>("")
+
+  useEffect(() => {
+    const getSuggestion = async () => {
+      if (content.length > 10) {
+        const suggestion = await getSuggestions(content)
+        setSuggestions(suggestion)
+      } else {
+        setSuggestions("")
+      }
+    }
+    getSuggestion()
+  }, [content])
 
   const handleSubmit = async () => {
     try {
