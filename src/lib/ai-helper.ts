@@ -1,3 +1,4 @@
+import { Group, ShiftSchedule } from '@/types/shift';
 import { invoke } from '@tauri-apps/api/tauri';
 
 interface ContentAnalysis {
@@ -174,4 +175,42 @@ async function generateSearchFilters(query: string, notes: SearchableNote[]) {
       end: dateEnd.toISOString()
     } : undefined
   };
+}
+
+export async function generateShiftSchedule(
+  groups: Group[],
+  startDate: Date,
+  days: number
+): Promise<ShiftSchedule[]> {
+  try {
+    return await invoke('generate_shift_schedule', { 
+      groups: JSON.stringify(groups),
+      startDate: startDate.toISOString(),
+      days 
+    });
+  } catch (error) {
+    console.error('Vardiya planı oluşturma hatası:', error);
+    return [];
+  }
+}
+
+export async function validateGroupChange(
+  employeeId: string,
+  newGroupId: string
+): Promise<{
+  isValid: boolean;
+  message: string;
+}> {
+  try {
+    return await invoke('validate_group_change', { 
+      employeeId,
+      newGroupId 
+    });
+  } catch (error) {
+    console.error('Grup değişikliği doğrulama hatası:', error);
+    return {
+      isValid: false,
+      message: 'Doğrulama hatası oluştu'
+    };
+  }
 } 

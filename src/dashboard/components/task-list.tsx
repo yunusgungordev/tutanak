@@ -1,21 +1,35 @@
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
 import { invoke } from "@tauri-apps/api/tauri"
-import { ArrowRight, FileDown, Plus, Trash2, Upload } from "lucide-react"
+import { ArrowRight, FileDown, Plus, Trash2, Upload, Clock, Users, UserPlus, X } from "lucide-react"
 import * as XLSX from "xlsx"
-
+import { toast } from "react-hot-toast"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
+import { Group, Employee, ShiftSchedule, ShiftType } from "@/types/shift"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import { cn } from "@/lib/utils"
+import { AddEmployeeDialog } from "./employee-dialog"
+import { AddGroupDialog } from "./group-dialog"
+import { GroupManagementDialog } from "./group-management-dialog"
+import { ShiftManagementDialog } from "./shift-management"
+import { validateGroupChange } from "@/lib/ai-helper"
 
 export function TaskList() {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [excelData, setExcelData] = useState<any[][]>([])
   const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(null)
   const [activeSheet, setActiveSheet] = useState<XLSX.WorkSheet | null>(null)
-  const [excelData, setExcelData] = useState<any[][]>([])
-  const [editingCell, setEditingCell] = useState<{
-    row: number
-    col: number
-  } | null>(null)
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
+  const [showShiftInfo, setShowShiftInfo] = useState(false)
+  const [groups, setGroups] = useState<Group[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [currentShifts, setCurrentShifts] = useState<{[key: string]: ShiftType}>({})
+  const [editingCell, setEditingCell] = useState<{row: number; col: number} | null>(null)
   const [editingHeader, setEditingHeader] = useState<number | null>(null)
+  const [shiftSchedule, setShiftSchedule] = useState<ShiftSchedule[]>([])
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -128,52 +142,231 @@ export function TaskList() {
     }
   }
 
-  return (
-    <div className="container mx-auto p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Görev Listesi</h2>
-        <div className="flex gap-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileUpload}
-            accept=".xlsx,.xls"
-            className="hidden"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
+  const GroupSelector = () => (
+    <div className="mb-4 flex items-center gap-4">
+      <Select
+        value={selectedGroup || ""}
+        onValueChange={(value) => setSelectedGroup(value)}
+      >
+        <SelectTrigger className="w-[200px]">
+          <SelectValue placeholder="Grup seçin" />
+        </SelectTrigger>
+        <SelectContent>
+          {groups.map((group) => (
+            <SelectItem key={group.id} value={group.id}>
+              {group.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setShowShiftInfo(!showShiftInfo)}
+      >
+        <Clock className="mr-2 h-4 w-4" />
+        Vardiya Bilgisi
+      </Button>
+    </div>
+  )
+
+  const ShiftInfoPanel = () => (
+    <div className="mb-4 rounded-lg border bg-card p-4">
+      <h3 className="mb-2 font-semibold">Güncel Vardiya Durumu</h3>
+      <div className="grid grid-cols-4 gap-4">
+        {groups.map((group) => (
+          <div 
+            key={group.id}
+            className={cn(
+              "rounded-md border p-3",
+              currentShifts[group.id] === 'Morning' && "bg-blue-50",
+              currentShifts[group.id] === 'Night' && "bg-purple-50",
+              currentShifts[group.id] === 'Rest' && "bg-gray-50"
+            )}
           >
-            <Upload className="mr-2 h-4 w-4" />
-            Excel Yükle
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportExcel}
-            disabled={!workbook}
-          >
-            <FileDown className="mr-2 h-4 w-4" />
-            Excel'e Aktar
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => {
-              const wb = XLSX.utils.book_new()
-              const ws = XLSX.utils.aoa_to_sheet([[]])
-              XLSX.utils.book_append_sheet(wb, ws, "Görev Listesi")
-              setWorkbook(wb)
-              setActiveSheet(ws)
-              setExcelData([[]])
-            }}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Yeni Liste
-          </Button>
+            <div className="font-medium">{group.name}</div>
+            <div className="text-sm text-muted-foreground">
+              {currentShifts[group.id] === 'Morning' && "08:00 - 20:00"}
+              {currentShifts[group.id] === 'Night' && "20:00 - 08:00"}
+              {currentShifts[group.id] === 'Rest' && "İstirahat"}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  const ManagementPanel = () => {
+    const [activeGroup, setActiveGroup] = useState<string>(groups[0]?.id || "")
+
+    return (
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Vardiya Yönetimi</h3>
+          <div className="flex gap-2">
+            <AddEmployeeDialog onEmployeeAdded={loadData} />
+            <AddGroupDialog onGroupAdded={loadData} />
+            <ShiftManagementDialog />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-[300px_1fr] gap-4">
+          <div className="rounded-lg border bg-card">
+            <div className="p-3 border-b bg-muted">
+              <h4 className="font-medium">Gruplar</h4>
+            </div>
+            <Tabs value={activeGroup} onValueChange={setActiveGroup}>
+              <TabsList className="flex flex-col w-full h-auto">
+                {groups.map((group) => (
+                  <TabsTrigger
+                    key={group.id}
+                    value={group.id}
+                    className="justify-between w-full p-3 rounded-none border-b last:border-b-0 data-[state=active]:bg-accent"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span>{group.name}</span>
+                    </div>
+                    <Badge variant={
+                      group.current_shift === 'Morning' ? 'default' :
+                      group.current_shift === 'Night' ? 'secondary' : 'outline'
+                    }>
+                      {group.current_shift === 'Morning' && "Gündüz"}
+                      {group.current_shift === 'Night' && "Gece"}
+                      {group.current_shift === 'Rest' && "İstirahat"}
+                    </Badge>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+
+          <Tabs value={activeGroup} onValueChange={setActiveGroup}>
+            {groups.map((group) => (
+              <TabsContent key={group.id} value={group.id}>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-5 w-5" />
+                        <span>{group.name} Grubu</span>
+                      </div>
+                      <Badge variant="outline">{
+                        employees.filter(emp => emp.group_id === group.id).length
+                      } Personel</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {employees
+                        .filter(emp => emp.group_id === group.id)
+                        .map(emp => (
+                          <div key={emp.id} 
+                            className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                            <span>{emp.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEmployeeGroupChange(emp.id, "")}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))
+                      }
+                    </div>
+
+                    <div className="mt-6">
+                      <Select onValueChange={(empId) => handleEmployeeGroupChange(empId, group.id)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Personel ekle..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {employees
+                            .filter(emp => !emp.group_id || emp.group_id === "")
+                            .map(emp => (
+                              <SelectItem key={emp.id} value={emp.id}>
+                                {emp.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            ))}
+          </Tabs>
         </div>
       </div>
+    )
+  }
+
+  const loadData = async () => {
+    try {
+      const [employeesData, groupsData, shiftsData] = await Promise.all([
+        invoke<string>('get_all_employees'),
+        invoke<string>('get_all_groups'),
+        invoke<string>('get_current_shifts')
+      ]);
+
+      setEmployees(JSON.parse(employeesData));
+      setGroups(JSON.parse(groupsData));
+      setCurrentShifts(JSON.parse(shiftsData));
+    } catch (error) {
+      toast.error('Veri yüklenirken hata oluştu');
+      console.error('Veri yükleme hatası:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleEmployeeGroupChange = async (employeeId: string, newGroupId: string) => {
+    try {
+      // Önce validasyon yapalım
+      const validation = await validateGroupChange(employeeId, newGroupId);
+      if (!validation.isValid) {
+        toast.error(validation.message);
+        return;
+      }
+
+      await invoke('update_employee_group', { 
+        employee_id: employeeId, 
+        group_id: newGroupId 
+      });
+      
+      // Başarılı olduğunda toast göster
+      toast.success('Personel gruba eklendi');
+      
+      // Verileri yenile
+      await loadData();
+    } catch (error) {
+      console.error('Grup değişikliği hatası:', error);
+      toast.error('Grup değişikliği yapılırken hata oluştu');
+    }
+  };
+
+  const handleAddEmployee = async (employee: Employee) => {
+    try {
+        await invoke('add_employee', { employee: JSON.stringify(employee) });
+        loadData();
+    } catch (error) {
+        toast.error('Personel eklenirken hata oluştu');
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-4">
+      <ManagementPanel />
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Görev Listesi</h2>
+        <GroupSelector />
+      </div>
+
+      {showShiftInfo && <ShiftInfoPanel />}
 
       <ScrollArea className="rounded-lg border">
         <div className="min-w-max">

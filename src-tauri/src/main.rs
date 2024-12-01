@@ -4,16 +4,21 @@
     windows_subsystem = "windows"
 )]
 
+mod models;
+mod shift_manager;
 use rusqlite::{Connection, Result, params};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tauri::State;
 use std::path::PathBuf;
-use std::sync::Mutex;
 use lazy_static::lazy_static;
 mod markov;
 use markov::MarkovChain;
 use sqlx::sqlite::SqlitePool;
-
+use crate::models::{Employee, Group, ShiftSchedule, ShiftType};
+use chrono::{DateTime, Utc};
+use crate::shift_manager::ShiftManager;
+use tokio::sync::Mutex;
 lazy_static! {
     static ref MARKOV_CHAIN: Mutex<MarkovChain> = Mutex::new(MarkovChain::new(2));
 }
@@ -122,6 +127,36 @@ fn initialize_database() -> std::result::Result<(), Box<dyn std::error::Error>> 
             layout TEXT NOT NULL,
             database TEXT NOT NULL,
             created_at TEXT NOT NULL
+        )",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS groups (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            current_shift TEXT NOT NULL
+        )",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS employees (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            group_id TEXT NOT NULL,
+            FOREIGN KEY(group_id) REFERENCES groups(id)
+        )",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS shift_schedules (
+            id TEXT PRIMARY KEY,
+            date TEXT NOT NULL,
+            group_id TEXT NOT NULL,
+            shift_type TEXT NOT NULL,
+            FOREIGN KEY(group_id) REFERENCES groups(id)
         )",
         [],
     )?;
@@ -284,6 +319,7 @@ async fn save_note(note: Note) -> Result<Note, String> {
 
 pub struct AppState {
     pub pool: SqlitePool,
+    pub shift_manager: Mutex<ShiftManager>,
 }
 
 #[tauri::command]
@@ -518,7 +554,7 @@ struct ContentAnalysis {
 
 #[tauri::command]
 async fn analyze_content(text: String) -> Result<ContentAnalysis, String> {
-    let chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
+    let chain = MARKOV_CHAIN.lock().await;
     
     let sentiment = chain.analyze_sentiment(&text);
     let category = chain.analyze_categories(&text);
@@ -537,7 +573,7 @@ async fn analyze_content(text: String) -> Result<ContentAnalysis, String> {
 
 #[tauri::command]
 async fn train_model(text: String, metadata: Option<String>) -> Result<(), String> {
-    let mut chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
+    let mut chain = MARKOV_CHAIN.lock().await;
     
     if let Some(meta) = metadata {
         let meta_data: Value = serde_json::from_str(&meta)
@@ -552,13 +588,13 @@ async fn train_model(text: String, metadata: Option<String>) -> Result<(), Strin
 
 #[tauri::command]
 async fn generate_text(start: String, length: usize) -> Result<String, String> {
-    let chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
+    let chain = MARKOV_CHAIN.lock().await;
     Ok(chain.generate(&start, length))
 }
 
 #[tauri::command]
 async fn analyze_importance(text: String, keywords: Vec<String>) -> Result<f64, String> {
-    let chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
+    let chain = MARKOV_CHAIN.lock().await;
     Ok(chain.analyze_importance(&text, &keywords))
 }
 
@@ -590,7 +626,7 @@ struct DateRange {
 
 #[tauri::command]
 async fn semantic_search(query: String, notes: String) -> Result<SearchAnalysis, String> {
-    let chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
+    let chain = MARKOV_CHAIN.lock().await;
     let notes: Vec<Value> = serde_json::from_str(&notes).map_err(|e| e.to_string())?;
     
     let query_words: Vec<String> = query
@@ -630,7 +666,7 @@ async fn semantic_search(query: String, notes: String) -> Result<SearchAnalysis,
 
 #[tauri::command]
 async fn analyze_search_query(query: String) -> Result<Value, String> {
-    let chain = MARKOV_CHAIN.lock().map_err(|e| e.to_string())?;
+    let chain = MARKOV_CHAIN.lock().await;
     Ok(chain.analyze_query(&query))
 }
 
@@ -719,12 +755,103 @@ async fn update_note_notification(
     Ok(())
 }
 
-fn main() {
+#[tauri::command(async)]
+async fn generate_shift_schedule(
+    groups: String,
+    start_date: String,
+    days: i64,
+    state: tauri::State<'_, AppState>,
+) -> Result<String, String> {
+    let groups: Vec<Group> = serde_json::from_str(&groups)
+        .map_err(|e| e.to_string())?;
+    
+    let start_date = DateTime::parse_from_rfc3339(&start_date)
+        .map_err(|e| e.to_string())?
+        .with_timezone(&Utc);
+
+    let mut shift_manager = state.shift_manager.lock().await;
+    let schedules = shift_manager.generate_schedule(start_date, days);
+    
+    serde_json::to_string(&schedules)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command(async)]
+async fn validate_group_change(
+    employee_id: String,
+    new_group_id: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<String, String> {
+    let shift_manager = state.shift_manager.lock().await;
+    
+    match shift_manager.validate_group_change(&employee_id, &new_group_id) {
+        Ok(_) => Ok(serde_json::json!({
+            "isValid": true,
+            "message": "Transfer edilebilir"
+        }).to_string()),
+        Err(msg) => Ok(serde_json::json!({
+            "isValid": false,
+            "message": msg
+        }).to_string())
+    }
+}
+
+#[tauri::command]
+async fn get_all_employees(state: State<'_, AppState>) -> Result<String, String> {
+    let shift_manager = state.shift_manager.lock().await;
+    let employees = shift_manager.get_all_employees();
+    serde_json::to_string(&employees).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_all_groups(state: State<'_, AppState>) -> Result<String, String> {
+    let shift_manager = state.shift_manager.lock().await;
+    let groups = shift_manager.get_all_groups();
+    serde_json::to_string(&groups).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_current_shifts(state: State<'_, AppState>) -> Result<String, String> {
+    let shift_manager = state.shift_manager.lock().await;
+    let shifts = shift_manager.get_current_shifts();
+    serde_json::to_string(&shifts).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn add_employee(
+    employee: String,
+    state: State<'_, AppState>
+) -> Result<(), String> {
+    let employee: Employee = serde_json::from_str(&employee)
+        .map_err(|e| e.to_string())?;
+    
+    let mut shift_manager = state.shift_manager.lock().await;
+    shift_manager.add_employee(employee)
+}
+
+#[tauri::command]
+async fn add_group(
+    group: String,
+    state: State<'_, AppState>
+) -> Result<(), String> {
+    let group: Group = serde_json::from_str(&group)
+        .map_err(|e| e.to_string())?;
+    
+    let mut shift_manager = state.shift_manager.lock().await;
+    shift_manager.add_group(group)
+}
+
+#[tokio::main]
+async fn main() {
     // Veritabanını başlat
     if let Err(e) = initialize_database() {
         eprintln!("Veritabanı başlatma hatası: {}", e);
     }
     tauri::Builder::default()
+        .manage(AppState {
+            pool: SqlitePool::connect(get_db_path().to_str().unwrap()).await.unwrap(),
+            shift_manager: Mutex::new(ShiftManager::new()),
+        })
         .invoke_handler(tauri::generate_handler![
             save_excel_data, 
             save_note, 
@@ -747,8 +874,16 @@ fn main() {
             add_note,
             update_note_status,
             delete_note,
-            update_note_notification
+            update_note_notification,
+            generate_shift_schedule,
+            validate_group_change,
+            get_all_employees,
+            get_all_groups,
+            get_current_shifts,
+            add_employee,
+            add_group
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
