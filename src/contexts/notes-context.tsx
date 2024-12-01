@@ -14,6 +14,7 @@ interface TimelineNote {
   reminder?: boolean
   lastNotified?: Date
   isImportant?: boolean
+  isNotified?: boolean
 }
 
 interface NotesContextType {
@@ -42,23 +43,23 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         for (const note of dbNotes) {
           await trainAIModel(note.content)
         }
+        console.log("Veritabanından gelen notlar:", dbNotes)
+        
         const timelineNotes: TimelineNote[] = dbNotes.map((note) => {
           const [year, month, day] = note.date.toString().split("-").map(Number)
           const localDate = new Date(year, month - 1, day)
-
           return {
             id: note.id?.toString() || crypto.randomUUID(),
             title: note.title,
             content: note.content,
             date: localDate,
             priority: note.priority as "low" | "medium" | "high",
-            status: "pending",
+            status: note.status || "pending",
             dueDate: note.dueDate ? new Date(note.dueDate) : undefined,
-            reminder: note.reminder,
-            lastNotified: note.lastNotified
-              ? new Date(note.lastNotified)
-              : undefined,
-            isImportant: note.isImportant,
+            reminder: Boolean(note.reminder),
+            lastNotified: note.lastNotified ? new Date(note.lastNotified) : undefined,
+            isImportant: Boolean(note.isImportant),
+            isNotified: Boolean(note.isNotified)
           }
         })
         setNotes(timelineNotes)
@@ -72,14 +73,13 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
 
   const addNote = async (note: Omit<TimelineNote, "id" | "status">) => {
     try {
-      // Veri doğrulama
       if (!note.title?.trim() || !note.content?.trim()) {
         throw new Error("Başlık ve içerik alanları zorunludur")
       }
 
-      // İçerik önem analizi
       const isImportant = await checkImportantContent(note.content)
-      
+      console.log("Not önemli mi:", isImportant)
+
       const noteData = {
         id: null,
         title: note.title.trim(),
@@ -90,22 +90,29 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         status: "pending",
-        due_date: note.dueDate?.toISOString(),
-        reminder: note.reminder ?? false,
-        last_notified: note.lastNotified?.toISOString(),
-        isImportant,
+        due_date: note.dueDate?.toISOString() || null,
+        reminder: note.reminder,
+        last_notified: note.lastNotified?.toISOString() || null,
+        is_important: isImportant,
+        is_notified: false
       }
 
-      const savedNote = await invoke<any>("save_note", {
-        note: noteData,
-      }).catch((error) => {
-        console.error("Not kaydetme hatası:", error)
-        throw new Error(
-          "Not kaydedilirken bir hata oluştu. Lütfen tekrar deneyin."
-        )
-      })
+      const savedNote = await invoke<{
+        id: number;
+        title: string;
+        content: string;
+        priority: string;
+        date: string;
+        time: string;
+        status: string;
+        due_date: string | null;
+        reminder: number;
+        last_notified: string | null;
+        is_important: number;
+        is_notified: number;
+      }>("save_note", { note: noteData })
 
-      if (!savedNote || !savedNote.id) {
+      if (!savedNote?.id) {
         throw new Error("Not kaydedilirken beklenmeyen bir hata oluştu")
       }
 
@@ -117,11 +124,10 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         priority: savedNote.priority as "low" | "medium" | "high",
         status: "pending",
         dueDate: savedNote.due_date ? new Date(savedNote.due_date) : undefined,
-        reminder: savedNote.reminder,
-        lastNotified: savedNote.last_notified
-          ? new Date(savedNote.last_notified)
-          : undefined,
-        isImportant: savedNote.isImportant,
+        reminder: Boolean(savedNote.reminder),
+        lastNotified: savedNote.last_notified ? new Date(savedNote.last_notified) : undefined,
+        isImportant: Boolean(savedNote.is_important),
+        isNotified: Boolean(savedNote.is_notified)
       }
 
       setNotes((prev) =>
@@ -130,15 +136,12 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         )
       )
 
-      // Yeni not ile modeli güncelle
       await trainAIModel(note.content)
-
       return timelineNote
+
     } catch (error) {
       console.error("Not ekleme hatası:", error)
-      throw error instanceof Error
-        ? error
-        : new Error("Bilinmeyen bir hata oluştu")
+      throw error instanceof Error ? error : new Error("Bilinmeyen bir hata oluştu")
     }
   }
 
@@ -216,9 +219,22 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
         "unutma",
         "kritik",
         "kesinlikle",
+        "ivedi",
+        "hemen",
+        "derhal"
       ]
       
       // Markov modelini kullanarak metni analiz et
+      const lowercaseContent = content.toLowerCase()
+      const hasImportantKeyword = importantKeywords.some(keyword => 
+        lowercaseContent.includes(keyword)
+      )
+      
+      if (hasImportantKeyword) {
+        return true
+      }
+      
+      // Markov modeli analizi
       const result = await invoke<number>("analyze_importance", { 
         text: content,
         keywords: importantKeywords 
@@ -256,3 +272,4 @@ export const useNotes = () => {
   if (!context) throw new Error("useNotes must be used within NotesProvider")
   return context
 }
+

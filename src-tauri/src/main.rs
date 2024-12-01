@@ -51,21 +51,9 @@ fn migrate_database() -> Result<(), String> {
             status TEXT NOT NULL DEFAULT 'pending',
             due_date TEXT,
             reminder INTEGER DEFAULT 0,
-            last_notified TEXT
-        )",
-        [],
-    ).map_err(|e| e.to_string())?;
-
-    // Templates tablosunu oluştur
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS templates (
-            id INTEGER PRIMARY KEY,
-            title TEXT NOT NULL,
-            description TEXT NOT NULL,
-            note TEXT,
-            template_type TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
+            last_notified TEXT,
+            is_notified INTEGER DEFAULT 0,
+            is_important INTEGER DEFAULT 0
         )",
         [],
     ).map_err(|e| e.to_string())?;
@@ -98,7 +86,9 @@ fn initialize_database() -> std::result::Result<(), Box<dyn std::error::Error>> 
             status TEXT NOT NULL DEFAULT 'pending',
             due_date TEXT,
             reminder INTEGER DEFAULT 0,
-            last_notified TEXT
+            last_notified TEXT,
+            is_notified INTEGER DEFAULT 0,
+            is_important INTEGER DEFAULT 0
         )",
         [],
     )?;
@@ -144,7 +134,7 @@ struct ExcelData {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Note {
-    id: Option<i32>,
+    id: Option<i64>,
     title: String,
     content: String,
     priority: String,
@@ -155,7 +145,9 @@ struct Note {
     status: Option<String>,
     due_date: Option<String>,
     reminder: Option<bool>,
-    last_notified: Option<String>
+    last_notified: Option<String>,
+    is_notified: Option<bool>,
+    is_important: Option<bool>
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -250,60 +242,11 @@ async fn save_excel_data(data: String, sheet_name: String) -> Result<(), String>
 
 #[tauri::command]
 async fn save_note(note: Note) -> Result<Note, String> {
-    println!("Not kaydediliyor: {:?}", note);
-    
-    let db_path = get_db_path();
-    println!("Veritabanı yolu: {:?}", db_path);
-    
-    if !db_path.exists() {
-        println!("Veritabanı dosyası bulunamadı, oluşturuluyor...");
-        initialize_database().map_err(|e| format!("Veritabanı başlatma hatası: {}", e))?;
-    }
-    
-    let mut conn = Connection::open(&db_path).map_err(|e| {
-        println!("Veritabanı bağlantı hatası: {}", e);
-        format!("Veritabanı bağlant hatası: {}", e)
-    })?;
-    
-    // Notes tablosunu kontrol et ve oluştur
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS notes (
-            id INTEGER PRIMARY KEY,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            priority TEXT NOT NULL,
-            date TEXT NOT NULL,
-            time TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            due_date TEXT,
-            reminder INTEGER DEFAULT 0,
-            last_notified TEXT
-        )",
-        [],
-    ).map_err(|e| format!("Tablo oluşturma hatası: {}", e))?;
-    
+    let mut conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     let note_clone = note.clone();
-    let status = note.status.unwrap_or_else(|| "pending".to_string());
-    let due_date = note.due_date.unwrap_or_default();
-    let last_notified = note.last_notified.unwrap_or_default();
-    let reminder = note.reminder.unwrap_or(false);
-
-    println!("SQL değerleri: {:?}", [
-        &note_clone.title,
-        &note_clone.content,
-        &note_clone.priority,
-        &note_clone.date,
-        &note_clone.time,
-        &note_clone.created_at,
-        &note_clone.updated_at,
-        &status,
-        &due_date,
-        &(reminder as i32).to_string(),
-        &last_notified
-    ]);
-
+    
+    println!("Not kaydediliyor: {:?}", note_clone);
+    
     let tx = conn.transaction().map_err(|e| {
         println!("Transaction başlatma hatası: {}", e);
         format!("Transaction başlatma hatası: {}", e)
@@ -313,8 +256,8 @@ async fn save_note(note: Note) -> Result<Note, String> {
         "INSERT INTO notes (
             title, content, priority, date, time, 
             created_at, updated_at, status, due_date, 
-            reminder, last_notified
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            reminder, last_notified, is_notified, is_important
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
         [
             &note_clone.title,
             &note_clone.content,
@@ -323,33 +266,26 @@ async fn save_note(note: Note) -> Result<Note, String> {
             &note_clone.time,
             &note_clone.created_at,
             &note_clone.updated_at,
-            &status,
-            &due_date,
-            &(reminder as i32).to_string(),
-            &last_notified
+            &note_clone.status.as_ref().unwrap_or(&"pending".to_string()),
+            &note_clone.due_date.unwrap_or_default(),
+            &note_clone.reminder.unwrap_or(false).to_string(),
+            &note_clone.last_notified.unwrap_or_default(),
+            &(note_clone.is_notified.unwrap_or(false) as i32).to_string(),
+            &(note_clone.is_important.unwrap_or(false) as i32).to_string()
         ],
     );
 
     match result {
         Ok(_) => {
             let id = tx.last_insert_rowid();
-            tx.commit().map_err(|e| {
-                println!("Transaction commit hatası: {}", e);
-                format!("Transaction commit hatası: {}", e)
-            })?;
+            tx.commit().map_err(|e| format!("Transaction commit hatası: {}", e))?;
             
-            println!("Not başarıyla kaydedildi, ID: {}", id);
-            Ok(Note {
-                id: Some(id as i32),
-                ..note_clone
-            })
+            let mut saved_note = note;
+            saved_note.id = Some(id);
+            Ok(saved_note)
         },
         Err(e) => {
-            println!("Not kaydetme hatası: {}", e);
-            tx.rollback().map_err(|re| {
-                println!("Transaction rollback hatası: {}", re);
-                format!("Transaction rollback hatası: {}", re)
-            })?;
+            tx.rollback().map_err(|re| format!("Transaction rollback hatası: {}", re))?;
             Err(format!("Not kaydetme hatası: {}", e))
         }
     }
@@ -361,14 +297,13 @@ async fn get_notes() -> Result<Vec<Note>, String> {
     
     let mut stmt = conn.prepare(
         "SELECT id, title, content, priority, date, time, created_at, updated_at, 
-                status, due_date, reminder, last_notified 
-         FROM notes 
-         ORDER BY created_at DESC"
+         status, due_date, reminder, last_notified, is_notified, is_important 
+         FROM notes ORDER BY date DESC"
     ).map_err(|e| e.to_string())?;
     
     let notes = stmt.query_map([], |row| {
         Ok(Note {
-            id: Some(row.get(0)?),
+            id: row.get(0)?,
             title: row.get(1)?,
             content: row.get(2)?,
             priority: row.get(3)?,
@@ -376,10 +311,12 @@ async fn get_notes() -> Result<Vec<Note>, String> {
             time: row.get(5)?,
             created_at: row.get(6)?,
             updated_at: row.get(7)?,
-            status: row.get(8)?,
+            status: Some(row.get(8)?),
             due_date: row.get(9)?,
-            reminder: row.get(10)?,
-            last_notified: row.get(11)?
+            reminder: Some(row.get::<_, i32>(10)? != 0),
+            last_notified: row.get(11)?,
+            is_notified: Some(row.get::<_, i32>(12)? != 0),
+            is_important: Some(row.get::<_, i32>(13)? != 0)
         })
     }).map_err(|e| e.to_string())?;
     
@@ -481,7 +418,7 @@ async fn create_dynamic_tab(tab_data: TabData) -> Result<bool, String> {
     
     // Debug için
     println!("JSON'a dönüştürülen layout: {}", layout_json);
-    
+
     conn.execute(
         "INSERT INTO tabs (id, label, type, layout, database, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         (
@@ -589,6 +526,18 @@ async fn analyze_importance(text: String, keywords: Vec<String>) -> Result<f64, 
     Ok(chain.analyze_importance(&text, &keywords))
 }
 
+#[tauri::command]
+async fn update_note_notification(id: i32, is_notified: bool) -> Result<(), String> {
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
+    
+    conn.execute(
+        "UPDATE notes SET is_notified = ?1 WHERE id = ?2",
+        [is_notified as i32, id],
+    ).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+
 fn main() {
     // Veritabanını başlat
     if let Err(e) = initialize_database() {
@@ -609,7 +558,8 @@ fn main() {
             init_database,
             train_model,
             generate_text,
-            analyze_importance
+            analyze_importance,
+            update_note_notification
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
