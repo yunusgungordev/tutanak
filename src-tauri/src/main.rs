@@ -4,13 +4,14 @@
     windows_subsystem = "windows"
 )]
 
-use rusqlite::{Connection, Result};
+use rusqlite::{Connection, Result, params};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use lazy_static::lazy_static;
 mod markov;
 use markov::MarkovChain;
+use sqlx::sqlite::SqlitePool;
 
 lazy_static! {
     static ref MARKOV_CHAIN: Mutex<MarkovChain> = Mutex::new(MarkovChain::new(2));
@@ -133,21 +134,18 @@ struct ExcelData {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-struct Note {
-    id: Option<i64>,
-    title: String,
-    content: String,
-    priority: String,
-    date: String,
-    time: String,
-    created_at: String,
-    updated_at: String,
-    status: Option<String>,
-    due_date: Option<String>,
-    reminder: Option<bool>,
-    last_notified: Option<String>,
-    is_notified: Option<bool>,
-    is_important: Option<bool>
+pub struct Note {
+    pub id: Option<i64>,
+    pub title: String,
+    pub content: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub reminder: Option<bool>,
+    pub status: Option<String>,
+    pub due_date: Option<String>,
+    pub last_notified: Option<String>,
+    pub is_notified: Option<bool>,
+    pub is_important: Option<bool>
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -242,63 +240,49 @@ async fn save_excel_data(data: String, sheet_name: String) -> Result<(), String>
 
 #[tauri::command]
 async fn save_note(note: Note) -> Result<Note, String> {
-    let mut conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
+    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     let note_clone = note.clone();
     
-    println!("Not kaydediliyor: {:?}", note_clone);
-    
-    let tx = conn.transaction().map_err(|e| {
-        println!("Transaction başlatma hatası: {}", e);
-        format!("Transaction başlatma hatası: {}", e)
-    })?;
-
-    let result = tx.execute(
+    conn.execute(
         "INSERT INTO notes (
-            title, content, priority, date, time, 
-            created_at, updated_at, status, due_date, 
-            reminder, last_notified, is_notified, is_important
-        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
-        [
+            title, content, created_at, updated_at, 
+            status, due_date, reminder, last_notified, 
+            is_notified, is_important
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        params![
             &note_clone.title,
             &note_clone.content,
-            &note_clone.priority,
-            &note_clone.date,
-            &note_clone.time,
             &note_clone.created_at,
             &note_clone.updated_at,
-            &note_clone.status.as_ref().unwrap_or(&"pending".to_string()),
-            &note_clone.due_date.unwrap_or_default(),
-            &note_clone.reminder.unwrap_or(false).to_string(),
-            &note_clone.last_notified.unwrap_or_default(),
-            &(note_clone.is_notified.unwrap_or(false) as i32).to_string(),
-            &(note_clone.is_important.unwrap_or(false) as i32).to_string()
+            &note_clone.status,
+            &note_clone.due_date,
+            &note_clone.reminder.unwrap_or(false),
+            &note_clone.last_notified,
+            &note_clone.is_notified.unwrap_or(false),
+            &note_clone.is_important.unwrap_or(false)
         ],
-    );
+    ).map_err(|e| e.to_string())?;
 
-    match result {
-        Ok(_) => {
-            let id = tx.last_insert_rowid();
-            tx.commit().map_err(|e| format!("Transaction commit hatası: {}", e))?;
-            
-            let mut saved_note = note;
-            saved_note.id = Some(id);
-            Ok(saved_note)
-        },
-        Err(e) => {
-            tx.rollback().map_err(|re| format!("Transaction rollback hatası: {}", re))?;
-            Err(format!("Not kaydetme hatası: {}", e))
-        }
-    }
+    let id = conn.last_insert_rowid();
+    let mut saved_note = note;
+    saved_note.id = Some(id);
+    Ok(saved_note)
+}
+
+pub struct AppState {
+    pub pool: SqlitePool,
 }
 
 #[tauri::command]
-async fn get_notes() -> Result<Vec<Note>, String> {
+async fn get_all_notes() -> Result<Vec<Note>, String> {
     let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
     
     let mut stmt = conn.prepare(
-        "SELECT id, title, content, priority, date, time, created_at, updated_at, 
-         status, due_date, reminder, last_notified, is_notified, is_important 
-         FROM notes ORDER BY date DESC"
+        "SELECT id, title, content, created_at, updated_at, 
+         CAST(reminder as BOOLEAN) as reminder, status, due_date, last_notified, 
+         CAST(is_notified as BOOLEAN) as is_notified, 
+         CAST(is_important as BOOLEAN) as is_important 
+         FROM notes ORDER BY created_at DESC"
     ).map_err(|e| e.to_string())?;
     
     let notes = stmt.query_map([], |row| {
@@ -306,17 +290,14 @@ async fn get_notes() -> Result<Vec<Note>, String> {
             id: row.get(0)?,
             title: row.get(1)?,
             content: row.get(2)?,
-            priority: row.get(3)?,
-            date: row.get(4)?,
-            time: row.get(5)?,
-            created_at: row.get(6)?,
-            updated_at: row.get(7)?,
-            status: Some(row.get(8)?),
-            due_date: row.get(9)?,
-            reminder: Some(row.get::<_, i32>(10)? != 0),
-            last_notified: row.get(11)?,
-            is_notified: Some(row.get::<_, i32>(12)? != 0),
-            is_important: Some(row.get::<_, i32>(13)? != 0)
+            created_at: row.get(3)?,
+            updated_at: row.get(4)?,
+            reminder: Some(row.get::<_, i32>(5)? != 0),
+            status: row.get(6)?,
+            due_date: row.get(7)?,
+            last_notified: row.get(8)?,
+            is_notified: Some(row.get::<_, i32>(9)? != 0),
+            is_important: Some(row.get::<_, i32>(10)? != 0)
         })
     }).map_err(|e| e.to_string())?;
     
@@ -547,7 +528,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             save_excel_data, 
             save_note, 
-            get_notes, 
+            get_all_notes, 
             save_template, 
             get_templates,
             delete_template,

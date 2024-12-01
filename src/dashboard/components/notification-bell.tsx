@@ -1,11 +1,18 @@
 import { useNotes } from "@/contexts/notes-context"
-import { addHours, isAfter, isBefore, addDays, startOfDay } from "date-fns"
+import { addHours, isAfter, isBefore, addDays, startOfDay, format } from "date-fns"
+import { tr } from "date-fns/locale"
 import { Bell } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export function NotificationBell() {
-  const { notes } = useNotes()
+  const { notes, updateNoteLastNotified } = useNotes()
 
   const importantNotifications = notes.filter((note) => {
     if (!note.dueDate || note.status === "completed") {
@@ -44,19 +51,60 @@ export function NotificationBell() {
 
   const notificationCount = importantNotifications.length
 
+  const handleNotificationClick = (noteId: string) => {
+    updateNoteLastNotified(noteId)
+  }
+
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="relative transition-colors hover:bg-muted/50"
-      title={`${notificationCount} adet bildirim`}
-    >
-      <Bell className="h-4 w-4" />
-      {notificationCount > 0 && (
-        <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
-          {notificationCount}
-        </span>
-      )}
-    </Button>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="relative transition-colors hover:bg-muted/50"
+          title={`${notificationCount} adet bildirim`}
+        >
+          <Bell className="h-4 w-4" />
+          {notificationCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+              {notificationCount}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80" align="end">
+        <ScrollArea className="h-[300px]">
+          <div className="space-y-2 p-2">
+            <h4 className="mb-4 font-medium">Bildirimler</h4>
+            {importantNotifications.length > 0 ? (
+              importantNotifications.map((note) => (
+                <div
+                  key={note.id}
+                  className="flex items-start justify-between rounded-lg border p-3 hover:bg-muted/50"
+                >
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{note.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Son Tarih: {format(new Date(note.dueDate!), "dd MMMM yyyy HH:mm", { locale: tr })}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleNotificationClick(note.id)}
+                  >
+                    Okundu
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-sm text-muted-foreground">
+                Bildirim bulunmuyor
+              </p>
+            )}
+          </div>
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
   )
 }

@@ -3,6 +3,20 @@ import { invoke } from "@tauri-apps/api/tauri"
 import { format, startOfDay } from "date-fns"
 import { generateSimilarText, trainAIModel } from "@/lib/ai-helper"
 
+interface Note {
+    id: string | null;
+    title: string;
+    content: string;
+    created_at: string;
+    updated_at: string;
+    reminder?: boolean;
+    status?: string;
+    due_date?: string;
+    last_notified?: string;
+    is_notified?: boolean;
+    is_important?: boolean;
+}
+
 interface TimelineNote {
   id: string
   title: string
@@ -39,32 +53,24 @@ export function NotesProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadNotes = async () => {
       try {
-        const dbNotes = await invoke<TimelineNote[]>("get_notes")
-        for (const note of dbNotes) {
-          await trainAIModel(note.content)
-        }
-        console.log("Veritabanından gelen notlar:", dbNotes)
-        
-        const timelineNotes: TimelineNote[] = dbNotes.map((note) => {
-          const [year, month, day] = note.date.toString().split("-").map(Number)
-          const localDate = new Date(year, month - 1, day)
-          return {
+        const result = await invoke<Note[]>('get_all_notes');
+        const timelineNotes = result.map(note => ({
             id: note.id?.toString() || crypto.randomUUID(),
             title: note.title,
             content: note.content,
-            date: localDate,
-            priority: note.priority as "low" | "medium" | "high",
-            status: note.status || "pending",
-            dueDate: note.dueDate ? new Date(note.dueDate) : undefined,
-            reminder: Boolean(note.reminder),
-            lastNotified: note.lastNotified ? new Date(note.lastNotified) : undefined,
-            isImportant: Boolean(note.isImportant),
-            isNotified: Boolean(note.isNotified)
-          }
-        })
-        setNotes(timelineNotes)
+            date: new Date(note.created_at),
+            priority: "medium" as const,
+            status: (note.status as TimelineNote["status"]) || "pending",
+            dueDate: note.due_date ? new Date(note.due_date) : undefined,
+            reminder: note.reminder,
+            lastNotified: note.last_notified ? new Date(note.last_notified) : undefined,
+            isImportant: note.is_important,
+            isNotified: note.is_notified
+        }));
+        setNotes(timelineNotes);
       } catch (error) {
-        console.error("Notlar yüklenirken hata:", error)
+        console.error('Notlar yüklenirken hata:', error);
+        setNotes([]);
       }
     }
 
