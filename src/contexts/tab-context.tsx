@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react"
 import { Overview } from "@/dashboard/components/overview"
-import { TaskList } from "@/dashboard/components/task-list"
 import { invoke } from "@tauri-apps/api/tauri"
-import { FileText, Layout, ListTodo } from "lucide-react"
+import { FileText, Layout } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "react-hot-toast"
 
@@ -53,15 +52,7 @@ const defaultTabs: TabContent[] = [
     icon: <FileText className="h-4 w-4" />,
     label: "Matbu Cümleler",
     layout: [],
-  },
-  {
-    id: "gorev-listesi",
-    type: "task-list",
-    component: TaskList as unknown as React.ComponentType<DynamicTabProps>,
-    icon: <ListTodo className="h-4 w-4" />,
-    label: "Görev Listesi",
-    layout: [],
-  },
+  }
 ]
 
 interface TabContextType {
