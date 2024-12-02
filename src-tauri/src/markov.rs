@@ -162,7 +162,7 @@ impl MarkovChain {
         }
     }
 
-    pub fn find_semantic_matches(&self, query: &str, notes: &[Value]) -> Vec<SemanticMatch> {
+    pub fn _find_semantic_matches(&self, query: &str, notes: &[Value]) -> Vec<SemanticMatch> {
         let query_words: Vec<String> = query
             .split_whitespace()
             .map(|s| s.to_lowercase())
@@ -208,7 +208,7 @@ impl MarkovChain {
         relevance / (note_words.len() as f64)
     }
     
-    pub fn suggest_filters(&self, query: &str, notes: &[Value]) -> SuggestedFilters {
+    pub fn suggest_filters(&self, _query: &str, notes: &[Value]) -> SuggestedFilters {
         // Kategori analizi
         let categories: Vec<String> = notes
             .iter()
