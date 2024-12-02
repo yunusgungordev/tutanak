@@ -6,6 +6,7 @@
 
 mod models;
 mod shift_manager;
+mod db;
 use rusqlite::{Connection, Result, params};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -15,10 +16,11 @@ use lazy_static::lazy_static;
 mod markov;
 use markov::MarkovChain;
 use sqlx::sqlite::SqlitePool;
-use crate::models::{Employee, Group, ShiftSchedule, ShiftType};
+use crate::models::{Employee, Group};
 use chrono::{DateTime, Utc};
 use crate::shift_manager::ShiftManager;
 use tokio::sync::Mutex;
+use crate::db::{initialize_database, load_groups, load_employees};
 lazy_static! {
     static ref MARKOV_CHAIN: Mutex<MarkovChain> = Mutex::new(MarkovChain::new(2));
 }
@@ -73,95 +75,6 @@ fn migrate_database() -> Result<(), String> {
 #[tauri::command]
 async fn init_database() -> Result<(), String> {
     migrate_database()
-}
-
-fn initialize_database() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    let db_path = get_db_path();
-    
-    // Veritabanı bağlantısını oluştur
-    let conn = Connection::open(&db_path)?;
-    
-    // Notes tablosunu oluştur
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS notes (
-            id INTEGER PRIMARY KEY,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            priority TEXT NOT NULL DEFAULT 'medium',
-            date TEXT NOT NULL,
-            time TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            due_date TEXT,
-            reminder BOOLEAN DEFAULT FALSE,
-            last_notified TEXT,
-            is_notified BOOLEAN DEFAULT FALSE,
-            is_important BOOLEAN DEFAULT FALSE,
-            category TEXT,
-            tags TEXT
-        )",
-        [],
-    )?;
-    
-    // Templates tablosunu oluştur
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS templates (
-            id INTEGER PRIMARY KEY,
-            title TEXT NOT NULL,
-            description TEXT NOT NULL,
-            note TEXT,
-            template_type TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )",
-        [],
-    )?;
-    
-    // Tabs tablosunu oluştur
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS tabs (
-            id TEXT PRIMARY KEY,
-            label TEXT NOT NULL,
-            type TEXT NOT NULL,
-            layout TEXT NOT NULL,
-            database TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        )",
-        [],
-    )?;
-    
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS groups (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            current_shift TEXT NOT NULL
-        )",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS employees (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            group_id TEXT NOT NULL,
-            FOREIGN KEY(group_id) REFERENCES groups(id)
-        )",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS shift_schedules (
-            id TEXT PRIMARY KEY,
-            date TEXT NOT NULL,
-            group_id TEXT NOT NULL,
-            shift_type TEXT NOT NULL,
-            FOREIGN KEY(group_id) REFERENCES groups(id)
-        )",
-        [],
-    )?;
-    
-    Ok(())
 }
 
 #[derive(Serialize, Deserialize)]
@@ -762,7 +675,7 @@ async fn generate_shift_schedule(
     days: i64,
     state: tauri::State<'_, AppState>,
 ) -> Result<String, String> {
-    let groups: Vec<Group> = serde_json::from_str(&groups)
+    let _groups: Vec<Group> = serde_json::from_str(&groups)
         .map_err(|e| e.to_string())?;
     
     let start_date = DateTime::parse_from_rfc3339(&start_date)
@@ -826,7 +739,7 @@ async fn add_employee(
         .map_err(|e| e.to_string())?;
     
     let mut shift_manager = state.shift_manager.lock().await;
-    shift_manager.add_employee(employee)
+    shift_manager.add_employee(employee, &state.pool).await
 }
 
 #[tauri::command]
@@ -838,7 +751,7 @@ async fn add_group(
         .map_err(|e| e.to_string())?;
     
     let mut shift_manager = state.shift_manager.lock().await;
-    shift_manager.add_group(group)
+    shift_manager.add_group(group, &state.pool).await
 }
 
 #[tauri::command]
@@ -853,14 +766,42 @@ async fn update_employee_group(
 
 #[tokio::main]
 async fn main() {
-    // Veritabanını başlat
+    let db_path = get_db_path();
+    
+    // Önce veritabanını başlat
     if let Err(e) = initialize_database() {
         eprintln!("Veritabanı başlatma hatası: {}", e);
+        return;
     }
+    
+    // Sonra bağlantıyı oluştur
+    let pool = match SqlitePool::connect(db_path.to_str().unwrap()).await {
+        Ok(pool) => pool,
+        Err(e) => {
+            eprintln!("Veritabanı bağlantı hatası: {}", e);
+            return;
+        }
+    };
+
+    let mut shift_manager = ShiftManager::new();
+    
+    // Verileri yükle
+    if let Ok(groups) = load_groups(&pool).await {
+        for group in groups {
+            shift_manager.groups.insert(group.id.clone(), group);
+        }
+    }
+    
+    if let Ok(employees) = load_employees(&pool).await {
+        for employee in employees {
+            shift_manager.employees.insert(employee.id.clone(), employee);
+        }
+    }
+    
     tauri::Builder::default()
         .manage(AppState {
-            pool: SqlitePool::connect(get_db_path().to_str().unwrap()).await.unwrap(),
-            shift_manager: Mutex::new(ShiftManager::new()),
+            pool,
+            shift_manager: Mutex::new(shift_manager),
         })
         .invoke_handler(tauri::generate_handler![
             save_excel_data, 

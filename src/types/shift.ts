@@ -3,7 +3,7 @@ export type ShiftType = 'Morning' | 'Night' | 'Rest';
 export interface Employee {
   id: string;
   name: string;
-  group_id: string;
+  group_id: string | null;
 }
 
 export interface Group {

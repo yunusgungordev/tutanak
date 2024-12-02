@@ -29,7 +29,7 @@ export function AddEmployeeDialog({ onEmployeeAdded }: { onEmployeeAdded: () => 
       const newEmployee: Employee = {
         id: crypto.randomUUID(),
         name: name.trim(),
-        group_id: ""
+        group_id: null
       }
 
       console.log('Personel ekleniyor:', newEmployee) // Debug için

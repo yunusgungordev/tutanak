@@ -1,11 +1,12 @@
-use crate::models::{Employee, Group, ShiftSchedule, ShiftType};
-use chrono::{DateTime, Duration, Utc};
+use crate::{db::{save_employee, save_group}, models::{Employee, Group, ShiftSchedule, ShiftType}};
+use chrono::{DateTime, Utc};
 use std::collections::HashMap;
+use sqlx::SqlitePool;
 
 pub struct ShiftManager {
-    groups: HashMap<String, Group>,
-    employees: HashMap<String, Employee>,
-    schedules: Vec<ShiftSchedule>,
+    pub employees: HashMap<String, Employee>,
+    pub groups: HashMap<String, Group>,
+    pub schedules: Vec<ShiftSchedule>
 }
 
 impl ShiftManager {
@@ -66,10 +67,12 @@ impl ShiftManager {
             .ok_or("Hedef grup bulunamadı")?;
             
         // Vardiya değişikliği kontrolü
-        let current_group = self.groups.get(&employee.group_id);
-        if let Some(current_group) = current_group {
-            if current_group.current_shift != new_group.current_shift {
-                return Err("Farklı vardiyada çalışan gruba transfer yapılamaz".to_string());
+        if let Some(current_group_id) = &employee.group_id {
+            let current_group = self.groups.get(current_group_id);
+            if let Some(current_group) = current_group {
+                if current_group.current_shift != new_group.current_shift {
+                    return Err("Farklı vardiyada çalışan gruba transfer yapılamaz".to_string());
+                }
             }
         }
 
@@ -91,15 +94,17 @@ impl ShiftManager {
             .collect()
     }
 
-    pub fn add_employee(&mut self, employee: Employee) -> Result<(), String> {
+    pub async fn add_employee(&mut self, employee: Employee, pool: &SqlitePool) -> Result<(), String> {
         if self.employees.contains_key(&employee.id) {
             return Err("Bu ID'ye sahip personel zaten mevcut".to_string());
         }
+        
+        save_employee(pool, &employee).await?;
         self.employees.insert(employee.id.clone(), employee);
         Ok(())
     }
 
-    pub fn add_group(&mut self, mut group: Group) -> Result<(), String> {
+    pub async fn add_group(&mut self, mut group: Group, pool: &SqlitePool) -> Result<(), String> {
         if self.groups.contains_key(&group.id) {
             return Err("Bu ID'ye sahip grup zaten mevcut".to_string());
         }
@@ -112,6 +117,7 @@ impl ShiftManager {
             _ => ShiftType::Rest
         };
         
+        save_group(pool, &group).await?;
         self.groups.insert(group.id.clone(), group);
         Ok(())
     }
@@ -119,7 +125,8 @@ impl ShiftManager {
     pub fn update_employee_group(&mut self, employee_id: &str, new_group_id: &str) -> Result<(), String> {
         let employee = self.employees.get_mut(employee_id)
             .ok_or("Personel bulunamadı")?;
-        employee.group_id = new_group_id.to_string();
+        
+        employee.group_id = Some(new_group_id.to_string());
         Ok(())
     }
 } 

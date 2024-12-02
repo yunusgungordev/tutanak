@@ -8,11 +8,31 @@ pub enum ShiftType {
     Rest,
 }
 
+impl std::fmt::Display for ShiftType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ShiftType::Morning => write!(f, "Morning"),
+            ShiftType::Night => write!(f, "Night"),
+            ShiftType::Rest => write!(f, "Rest"),
+        }
+    }
+}
+
+impl From<String> for ShiftType {
+    fn from(s: String) -> Self {
+        match s.as_str() {
+            "Morning" => ShiftType::Morning,
+            "Night" => ShiftType::Night,
+            _ => ShiftType::Rest,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Employee {
     pub id: String,
     pub name: String,
-    pub group_id: String,
+    pub group_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
