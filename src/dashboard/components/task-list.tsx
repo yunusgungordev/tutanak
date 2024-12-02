@@ -171,31 +171,48 @@ export function TaskList() {
     </div>
   )
 
-  const ShiftInfoPanel = () => (
-    <div className="mb-4 rounded-lg border bg-card p-4">
-      <h3 className="mb-2 font-semibold">Güncel Vardiya Durumu</h3>
-      <div className="grid grid-cols-4 gap-4">
-        {groups.map((group) => (
-          <div 
-            key={group.id}
-            className={cn(
-              "rounded-md border p-3",
-              currentShifts[group.id] === 'Morning' && "bg-blue-50",
-              currentShifts[group.id] === 'Night' && "bg-purple-50",
-              currentShifts[group.id] === 'Rest' && "bg-gray-50"
-            )}
-          >
-            <div className="font-medium">{group.name}</div>
-            <div className="text-sm text-muted-foreground">
-              {currentShifts[group.id] === 'Morning' && "08:00 - 20:00"}
-              {currentShifts[group.id] === 'Night' && "20:00 - 08:00"}
-              {currentShifts[group.id] === 'Rest' && "İstirahat"}
+  const ShiftInfoPanel = () => {
+    useEffect(() => {
+      const updateShifts = async () => {
+        try {
+          const shiftsData = await invoke<string>('get_current_shifts');
+          setCurrentShifts(JSON.parse(shiftsData));
+        } catch (error) {
+          console.error('Vardiya durumu güncelleme hatası:', error);
+        }
+      };
+      
+      updateShifts();
+      const interval = setInterval(updateShifts, 60000); // Her dakika güncelle
+      return () => clearInterval(interval);
+    }, []);
+
+    return (
+      <div className="mb-4 rounded-lg border bg-card p-4">
+        <h3 className="mb-2 font-semibold">Güncel Vardiya Durumu</h3>
+        <div className="grid grid-cols-4 gap-4">
+          {groups.map((group) => (
+            <div 
+              key={group.id}
+              className={cn(
+                "rounded-md border p-3",
+                group.current_shift === 'Morning' && "bg-blue-50",
+                group.current_shift === 'Night' && "bg-purple-50",
+                group.current_shift === 'Rest' && "bg-gray-50"
+              )}
+            >
+              <div className="font-medium">{group.name}</div>
+              <div className="text-sm text-muted-foreground">
+                {group.current_shift === 'Morning' && "08:00 - 20:00"}
+                {group.current_shift === 'Night' && "20:00 - 08:00"}
+                {group.current_shift === 'Rest' && "İstirahat"}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
-  )
+    );
+  };
 
   const ManagementPanel = () => {
     const [activeGroup, setActiveGroup] = useState<string>(groups[0]?.id || "")

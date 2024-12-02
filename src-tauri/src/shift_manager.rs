@@ -19,17 +19,30 @@ impl ShiftManager {
 
     pub fn generate_schedule(&mut self, start_date: DateTime<Utc>, days: i64) -> Vec<ShiftSchedule> {
         let mut schedules = Vec::new();
-        let groups: Vec<Group> = self.groups.values().cloned().collect();
-        
-        for day in 0..days {
-            let current_date = start_date + Duration::days(day);
-            
-            for (index, group) in groups.iter().enumerate() {
-                let shift_type = match (index + day as usize) % 3 {
-                    0 => ShiftType::Morning,
-                    1 => ShiftType::Night,
-                    _ => ShiftType::Rest,
-                };
+        let mut current_date = start_date;
+        let shift_pattern = vec![
+            ShiftType::Morning,  // Grup 1: 08:00-20:00
+            ShiftType::Night,    // Grup 2: 20:00-08:00
+            ShiftType::Rest,     // Grup 3: İstirahat
+            ShiftType::Rest      // Grup 4: İstirahat
+        ];
+
+        // Grupları vardiya düzenine göre sırala
+        let mut groups: Vec<Group> = self.groups.values().cloned().collect();
+        groups.sort_by(|a, b| a.id.cmp(&b.id));
+
+        for _ in 0..days {
+            for (group_index, group) in groups.iter().enumerate() {
+                // 12 saatlik vardiyalar için pozisyon hesapla
+                let position = (current_date.timestamp() / (12 * 3600)) % 4;
+                let shift_index = (group_index as i64 + position) % 4;
+                
+                let shift_type = shift_pattern[shift_index as usize].clone();
+                
+                // Grup durumunu güncelle
+                if let Some(group) = self.groups.get_mut(&group.id) {
+                    group.current_shift = shift_type.clone();
+                }
 
                 schedules.push(ShiftSchedule {
                     id: uuid::Uuid::new_v4().to_string(),
@@ -38,6 +51,7 @@ impl ShiftManager {
                     shift_type,
                 });
             }
+            current_date = current_date + chrono::Duration::hours(12);
         }
 
         self.schedules = schedules.clone();
@@ -85,10 +99,19 @@ impl ShiftManager {
         Ok(())
     }
 
-    pub fn add_group(&mut self, group: Group) -> Result<(), String> {
+    pub fn add_group(&mut self, mut group: Group) -> Result<(), String> {
         if self.groups.contains_key(&group.id) {
             return Err("Bu ID'ye sahip grup zaten mevcut".to_string());
         }
+        
+        // Mevcut grup sayısına göre başlangıç vardiyasını belirle
+        let current_count = self.groups.len();
+        group.current_shift = match current_count % 4 {
+            0 => ShiftType::Morning,
+            1 => ShiftType::Night,
+            _ => ShiftType::Rest
+        };
+        
         self.groups.insert(group.id.clone(), group);
         Ok(())
     }
