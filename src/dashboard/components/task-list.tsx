@@ -252,46 +252,58 @@ export function TaskList() {
                         <Users className="h-5 w-5" />
                         <span>{group.name} Grubu</span>
                       </div>
-                      <Badge variant="outline">{
-                        employees.filter(emp => emp.group_id === group.id).length
-                      } Personel</Badge>
+                      <Badge variant="outline">
+                        {employees.filter(emp => emp.group_id === group.id).length} Personel
+                      </Badge>
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      {employees
-                        .filter(emp => emp.group_id === group.id)
-                        .map(emp => (
-                          <div key={emp.id} 
-                            className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                            <span>{emp.name}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEmployeeGroupChange(emp.id, "")}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))
-                      }
-                    </div>
-
-                    <div className="mt-6">
-                      <Select onValueChange={(empId) => handleEmployeeGroupChange(empId, group.id)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Personel ekle..." />
-                        </SelectTrigger>
-                        <SelectContent>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="mb-2 font-medium">Grupsuz Personeller</h4>
+                        <div className="space-y-2">
                           {employees
                             .filter(emp => !emp.group_id || emp.group_id === "")
                             .map(emp => (
-                              <SelectItem key={emp.id} value={emp.id}>
-                                {emp.name}
-                              </SelectItem>
+                              <div
+                                key={emp.id}
+                                className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                              >
+                                <span>{emp.name}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEmployeeGroupChange(emp.id, group.id)}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
                             ))}
-                        </SelectContent>
-                      </Select>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="mb-2 font-medium">Grup Personelleri</h4>
+                        <div className="space-y-2">
+                          {employees
+                            .filter(emp => emp.group_id === group.id)
+                            .map(emp => (
+                              <div
+                                key={emp.id}
+                                className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                              >
+                                <span>{emp.name}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEmployeeGroupChange(emp.id, "")}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -326,22 +338,24 @@ export function TaskList() {
 
   const handleEmployeeGroupChange = async (employeeId: string, newGroupId: string) => {
     try {
-      // Önce validasyon yapalım
-      const validation = await validateGroupChange(employeeId, newGroupId);
-      if (!validation.isValid) {
-        toast.error(validation.message);
-        return;
-      }
-
+      // Önce API çağrısını yap
       await invoke('update_employee_group', { 
-        employee_id: employeeId, 
-        group_id: newGroupId 
+        employeeId: employeeId, 
+        groupId: newGroupId 
       });
-      
-      // Başarılı olduğunda toast göster
+
+      // Yerel state'i güncelle
+      setEmployees(prevEmployees => 
+        prevEmployees.map(emp => 
+          emp.id === employeeId 
+            ? { ...emp, group_id: newGroupId }  // group_id olarak güncelle
+            : emp
+        )
+      );
+
       toast.success('Personel gruba eklendi');
       
-      // Verileri yenile
+      // Tüm verileri yeniden yükle
       await loadData();
     } catch (error) {
       console.error('Grup değişikliği hatası:', error);

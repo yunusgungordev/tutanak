@@ -841,6 +841,16 @@ async fn add_group(
     shift_manager.add_group(group)
 }
 
+#[tauri::command]
+async fn update_employee_group(
+    employee_id: String,
+    group_id: String,
+    state: State<'_, AppState>
+) -> Result<(), String> {
+    let mut shift_manager = state.shift_manager.lock().await;
+    shift_manager.update_employee_group(&employee_id, &group_id)
+}
+
 #[tokio::main]
 async fn main() {
     // Veritabanını başlat
@@ -881,7 +891,8 @@ async fn main() {
             get_all_groups,
             get_current_shifts,
             add_employee,
-            add_group
+            add_group,
+            update_employee_group
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
