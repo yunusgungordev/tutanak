@@ -277,6 +277,8 @@ export function Timeline() {
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             className="h-9 w-[300px]"
+            onFocus={() => setIsMinimized(false)}
+            onClick={() => setIsMinimized(false)}
           />
           {activeFilters.categories.length > 0 || 
            activeFilters.priorities.length > 0 || 
