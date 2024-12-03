@@ -34,44 +34,6 @@ fn get_db_path() -> PathBuf {
     db_dir.join("data.db")
 }
 
-fn migrate_database() -> Result<(), String> {
-    let conn = Connection::open(get_db_path()).map_err(|e| e.to_string())?;
-    
-    // Eski tabloyu sil
-    conn.execute("DROP TABLE IF EXISTS notes", [])
-        .map_err(|e| e.to_string())?;
-    
-    // Yeni tabloyu oluştur
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS notes (
-            id INTEGER PRIMARY KEY,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            priority TEXT NOT NULL DEFAULT 'medium',
-            date TEXT NOT NULL,
-            time TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            due_date TEXT,
-            reminder BOOLEAN DEFAULT FALSE,
-            last_notified TEXT,
-            is_notified BOOLEAN DEFAULT FALSE,
-            is_important BOOLEAN DEFAULT FALSE,
-            category TEXT,
-            tags TEXT
-        )",
-        [],
-    ).map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
-#[tauri::command]
-async fn init_database() -> Result<(), String> {
-    migrate_database()
-}
-
 #[derive(Serialize, Deserialize)]
 struct ExcelData {
     id: i32,
@@ -696,7 +658,6 @@ async fn main() {
             get_tabs,
             delete_tab,
             update_tab,
-            init_database,
             train_model,
             generate_text,
             analyze_importance,
