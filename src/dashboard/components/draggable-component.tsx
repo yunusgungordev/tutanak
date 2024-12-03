@@ -117,10 +117,12 @@ export function DraggableComponent({
   }
 
   const handleUpdate = (updatedConfig: LayoutConfig) => {
+    const newLayout = layout.map((l) => (l.id === updatedConfig.id ? updatedConfig : l));
+    setLayout(newLayout);
     if (onContentUpdate) {
-      onContentUpdate(updatedConfig)
+      onContentUpdate(updatedConfig);
     }
-  }
+  };
 
   const handleComponentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -151,6 +153,27 @@ export function DraggableComponent({
       onEventTrigger(e, event)
     })
   }
+
+  const updateProperty = <K extends keyof ComponentProperties>(
+    key: K,
+    value: ComponentProperties[K]
+  ) => {
+    const newLayout = [...layout];
+    const index = newLayout.findIndex((l) => l.id === item.id);
+    if (index !== -1) {
+      newLayout[index] = {
+        ...newLayout[index],
+        properties: {
+          ...newLayout[index].properties,
+          [key]: value,
+        },
+      };
+      setLayout(newLayout);
+      if (onContentUpdate) {
+        onContentUpdate(newLayout[index]);
+      }
+    }
+  };
 
   return (
     <div
@@ -188,7 +211,6 @@ export function DraggableComponent({
       </div>
       {renderComponentPreview({
         ...item,
-        onContentUpdate: handleUpdate,
         properties: {
           ...item.properties,
           events: item.properties.events,

@@ -52,3 +52,12 @@ export type ComponentEvent = {
 interface ComponentProperties extends BaseComponentProperties {
   events?: ComponentEvent[];
 }
+
+interface TextProperties extends BaseComponentProperties {
+  content: string;
+  fontSize: number;
+  fontFamily: string;
+  fontWeight: "normal" | "bold";
+  color: string;
+  textAlign: "left" | "center" | "right";
+}

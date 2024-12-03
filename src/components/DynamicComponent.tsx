@@ -438,6 +438,25 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
         )
       case "table":
         return renderTable()
+      case "text":
+        return (
+          <div
+            style={{
+              fontSize: `${config.properties.fontSize || 16}px`,
+              fontFamily: config.properties.fontFamily || "Arial",
+              fontWeight: config.properties.fontWeight || "normal",
+              color: config.properties.color || "#000000",
+              textAlign: (config.properties.textAlign || "left") as "left" | "center" | "right",
+              width: "100%",
+              height: "100%",
+              padding: "8px",
+              overflow: "auto"
+            }}
+            className="bg-background"
+          >
+            {config.properties.content || ""}
+          </div>
+        );
       default:
         return null
     }

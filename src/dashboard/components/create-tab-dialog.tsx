@@ -39,7 +39,7 @@ import { nanoid } from "nanoid"
 import { toast } from "react-hot-toast"
 import { Rnd } from "react-rnd"
 
-import { ComponentProperties, DraggableComponentType } from "@/types/component"
+import { ComponentProperties, DraggableComponentType, FontWeight, TextAlign } from "@/types/component"
 import { Field, LayoutConfig, TabContent } from "@/types/tab"
 import { cn } from "@/lib/utils"
 import { useInteractable } from "@/hooks/use-interactable"
@@ -242,6 +242,25 @@ const COMPONENTS: DraggableComponentType[] = [
       pageSize: 5,
     },
   },
+  {
+    id: "text",
+    type: "text",
+    label: "Metin",
+    description: "Özelleştirilebilir metin alanı",
+    icon: <Type className="h-4 w-4" />,
+    defaultProps: {
+      content: "Yeni Metin",
+      fontSize: 16,
+      fontFamily: "Arial",
+      fontWeight: "normal" as const,
+      color: "#000000",
+      textAlign: "left" as const,
+      width: 200,
+      height: 40,
+      x: 0,
+      y: 0,
+    },
+  },
 ]
 
 // Component açıklamalarını getiren yardımcı fonksiyon
@@ -259,6 +278,8 @@ function getComponentDescription(type: string): string {
       return "Veri tablosu"
     case "checkbox":
       return "Onay kutusu"
+    case "text":
+      return "Özelleştirilebilir metin"
     default:
       return ""
   }
@@ -291,21 +312,23 @@ function PropertiesPanel({
   const component = layout.find((item) => item.id === selectedComponent)
   if (!component) return null
 
-  const updateProperty = (key: string, value: any) => {
-    setLayout(
-      layout.map((item) =>
-        item.id === selectedComponent
-          ? {
-              ...item,
-              properties: {
-                ...item.properties,
-                [key]: value,
-              },
-            }
-          : item
-      )
-    )
-  }
+  const updateProperty = <K extends keyof ComponentProperties>(
+    key: K,
+    value: ComponentProperties[K]
+  ) => {
+    const newLayout = [...layout];
+    const index = newLayout.findIndex((l) => l.id === selectedComponent);
+    if (index !== -1) {
+      newLayout[index] = {
+        ...newLayout[index],
+        properties: {
+          ...newLayout[index].properties,
+          [key]: value,
+        },
+      };
+      setLayout(newLayout);
+    }
+  };
 
   const addEvent = (
     event: NonNullable<ComponentProperties["events"]>[number]
@@ -526,7 +549,7 @@ function PropertiesPanel({
                 <Checkbox
                   checked={component.properties.striped}
                   onCheckedChange={(checked) =>
-                    updateProperty("striped", checked)
+                    updateProperty("striped", checked === true)
                   }
                 />
                 <span className="text-sm">Zebra Desenli</span>
@@ -535,7 +558,7 @@ function PropertiesPanel({
                 <Checkbox
                   checked={component.properties.bordered}
                   onCheckedChange={(checked) =>
-                    updateProperty("bordered", checked)
+                    updateProperty("bordered", checked === true)
                   }
                 />
                 <span className="text-sm">Kenarlıklar</span>
@@ -544,7 +567,7 @@ function PropertiesPanel({
                 <Checkbox
                   checked={component.properties.hoverable}
                   onCheckedChange={(checked) =>
-                    updateProperty("hoverable", checked)
+                    updateProperty("hoverable", checked === true)
                   }
                 />
                 <span className="text-sm">Hover Efekti</span>
@@ -553,7 +576,7 @@ function PropertiesPanel({
                 <Checkbox
                   checked={component.properties.sortable}
                   onCheckedChange={(checked) =>
-                    updateProperty("sortable", checked)
+                    updateProperty("sortable", checked === true)
                   }
                 />
                 <span className="text-sm">Sıralanabilir</span>
@@ -568,7 +591,7 @@ function PropertiesPanel({
                 <Checkbox
                   checked={component.properties.showPagination}
                   onCheckedChange={(checked) =>
-                    updateProperty("showPagination", checked)
+                    updateProperty("showPagination", checked === true)
                   }
                 />
                 <span className="text-sm">Sayfalama Göster</span>
@@ -595,6 +618,112 @@ function PropertiesPanel({
                   </Select>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {component.type === "text" && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-xs">Metin İçeriği</Label>
+            <Textarea
+              value={component.properties.content || ""}
+              onChange={(e) => {
+                const newLayout = [...layout];
+                const index = newLayout.findIndex((l) => l.id === component.id);
+                if (index !== -1) {
+                  newLayout[index].properties.content = e.target.value;
+                  setLayout(newLayout);
+                }
+              }}
+              className="min-h-[100px]"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <Label className="text-xs">Yazı Boyutu</Label>
+              <Input
+                type="number"
+                value={component.properties.fontSize || 16}
+                onChange={(e) => {
+                  const newLayout = [...layout];
+                  const index = newLayout.findIndex((l) => l.id === component.id);
+                  if (index !== -1) {
+                    newLayout[index].properties.fontSize = parseInt(e.target.value);
+                    setLayout(newLayout);
+                  }
+                }}
+                min={8}
+                max={72}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-xs">Yazı Rengi</Label>
+              <Input
+                type="color"
+                value={component.properties.color || "#000000"}
+                onChange={(e) => {
+                  const newLayout = [...layout];
+                  const index = newLayout.findIndex((l) => l.id === component.id);
+                  if (index !== -1) {
+                    newLayout[index].properties.color = e.target.value;
+                    setLayout(newLayout);
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2">
+              <Label className="text-xs">Yazı Tipi</Label>
+              <Select
+                value={component.properties.fontFamily || "Arial"}
+                onValueChange={(value) => {
+                  const newLayout = [...layout];
+                  const index = newLayout.findIndex((l) => l.id === component.id);
+                  if (index !== -1) {
+                    newLayout[index].properties.fontFamily = value;
+                    setLayout(newLayout);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Arial">Arial</SelectItem>
+                  <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                  <SelectItem value="Courier New">Courier New</SelectItem>
+                  <SelectItem value="Georgia">Georgia</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Yazı Kalınlığı</Label>
+              <Select
+                value={component.properties.fontWeight || "normal"}
+                onValueChange={(value: "normal" | "bold") => {
+                  const newLayout = [...layout];
+                  const index = newLayout.findIndex((l) => l.id === component.id);
+                  if (index !== -1) {
+                    newLayout[index].properties.fontWeight = value;
+                    setLayout(newLayout);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="bold">Kalın</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
@@ -647,48 +776,57 @@ const COMPONENT_CATEGORIES = [
     title: "Temel Bileşenler",
     components: [
       {
+        id: "text",
+        type: "text",
+        label: "Metin",
+        description: "Özelleştirilebilir metin alanı",
+        icon: <Type className="h-4 w-4" />,
+        defaultProps: COMPONENTS.find(c => c.id === "text")!.defaultProps,
+      },
+      {
         id: "input",
         type: "input",
         label: "Metin Kutusu",
-        description: "Tek satırlık metin girişi için",
+        description: "Tek satırlık metin girişi",
         icon: <InputIcon className="h-4 w-4" />,
-        defaultProps: {
-          label: "Yeni Metin Kutusu",
-          placeholder: "Metin giriniz",
-          width: 200,
-          height: 40,
-          x: 0,
-          y: 0,
-        },
-      },
-      {
-        id: "button",
-        type: "button",
-        label: "Buton",
-        description: "Tıklanabilir buton",
-        icon: <Square className="h-4 w-4" />,
-        defaultProps: {
-          label: "Yeni Buton",
-          width: 120,
-          height: 40,
-          x: 0,
-          y: 0,
-        },
+        defaultProps: COMPONENTS.find(c => c.id === "input")!.defaultProps,
       },
       {
         id: "textarea",
         type: "textarea",
         label: "Çok Satırlı Metin",
-        description: "Uzun metinler için",
+        description: "Çok satırlı metin girişi",
         icon: <Type className="h-4 w-4" />,
-        defaultProps: {
-          label: "Yeni Çok Satırlı Metin",
-          placeholder: "Metin giriniz",
-          width: 300,
-          height: 100,
-          x: 0,
-          y: 0,
-        },
+        defaultProps: COMPONENTS.find(c => c.id === "textarea")!.defaultProps,
+      },
+    ],
+  },
+  {
+    title: "Form Bileşenleri",
+    components: [
+      {
+        id: "select",
+        type: "select",
+        label: "Seçim Kutusu",
+        description: "Açılır liste seçimi",
+        icon: <ListTodo className="h-4 w-4" />,
+        defaultProps: COMPONENTS.find(c => c.id === "select")!.defaultProps,
+      },
+      {
+        id: "checkbox",
+        type: "checkbox",
+        label: "Onay Kutusu",
+        description: "Onay kutusu",
+        icon: <Square className="h-4 w-4" />,
+        defaultProps: COMPONENTS.find(c => c.id === "checkbox")!.defaultProps,
+      },
+      {
+        id: "button",
+        type: "button",
+        label: "Buton",
+        description: "Tıklanabilir düğme",
+        icon: <Square className="h-4 w-4" />,
+        defaultProps: COMPONENTS.find(c => c.id === "button")!.defaultProps,
       },
     ],
   },
@@ -699,20 +837,9 @@ const COMPONENT_CATEGORIES = [
         id: "table",
         type: "table",
         label: "Tablo",
-        description: "Verileri düzenli göstermek için",
+        description: "Veri tablosu",
         icon: <Table className="h-4 w-4" />,
-        defaultProps: {
-          label: "Yeni Tablo",
-          width: 400,
-          height: 200,
-          x: 0,
-          y: 0,
-          headers: ["Başlık 1", "Başlık 2", "Başlık 3"],
-          rows: [
-            ["", "", ""],
-            ["", "", ""],
-          ],
-        },
+        defaultProps: COMPONENTS.find(c => c.id === "table")!.defaultProps,
       },
     ],
   },
@@ -911,6 +1038,10 @@ export function CreateTabDialog({
     }
   }
 
+  useEffect(() => {
+    // Pozisyon ve boyutlandırma gibi durumları izleyin
+  }, [layout]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[800px] max-h-[90vh] max-w-[90vw] flex-col overflow-hidden">
@@ -1043,7 +1174,7 @@ export function CreateTabDialog({
               setLayout={setLayout}
               selectedComponent={selectedComponent}
               onSelect={handleComponentSelect}
-              renderComponentPreview={renderComponentPreview}
+              renderComponentPreview={(item) => renderComponentPreview(item, layout, setLayout)}
               isDialog={true}
               onEventTrigger={(event, config) => {
                 // Olay işleyici mantığı buraya gelecek
@@ -1076,7 +1207,20 @@ export function CreateTabDialog({
   )
 }
 
-function renderComponentPreview(item: LayoutConfig) {
+function renderComponentPreview(
+  item: LayoutConfig,
+  layout: LayoutConfig[],
+  setLayout: (layout: LayoutConfig[]) => void
+) {
+  const updateProperty = <K extends keyof ComponentProperties>(
+    key: K,
+    value: ComponentProperties[K]
+  ) => {
+    if (item.properties) {
+      item.properties[key] = value;
+    }
+  };
+
   const handleEvent = (event: any, eventType: "click" | "change") => {
     const events = item.properties.events?.filter(e => e.type === eventType);
     events?.forEach(event => {
@@ -1300,6 +1444,25 @@ function renderComponentPreview(item: LayoutConfig) {
               </Button>
             </div>
           </div>
+        </div>
+      )
+    case "text":
+      return (
+        <div
+          style={{
+            fontSize: `${item.properties.fontSize || 16}px`,
+            fontFamily: item.properties.fontFamily || "Arial",
+            fontWeight: item.properties.fontWeight || "normal",
+            color: item.properties.color || "#000000",
+            textAlign: item.properties.textAlign || "left",
+            width: "100%",
+            height: "100%",
+            padding: "8px",
+            overflow: "auto"
+          }}
+          className="rounded-md border bg-background"
+        >
+          {item.properties.content || ""}
         </div>
       )
     default:
