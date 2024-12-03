@@ -5,22 +5,17 @@
 )]
 
 mod models;
-mod shift_manager;
 mod db;
 use rusqlite::{Connection, Result, params};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::State;
 use std::path::PathBuf;
 use lazy_static::lazy_static;
 mod markov;
 use markov::MarkovChain;
 use sqlx::sqlite::SqlitePool;
-use crate::models::{Employee, Group};
-use chrono::{DateTime, Utc};
-use crate::shift_manager::ShiftManager;
 use tokio::sync::Mutex;
-use crate::db::{initialize_database, load_groups, load_employees};
+use crate::db::initialize_database;
 lazy_static! {
     static ref MARKOV_CHAIN: Mutex<MarkovChain> = Mutex::new(MarkovChain::new(2));
 }
@@ -232,7 +227,6 @@ async fn save_note(note: Note) -> Result<Note, String> {
 
 pub struct AppState {
     pub pool: SqlitePool,
-    pub shift_manager: Mutex<ShiftManager>,
 }
 
 #[tauri::command]
@@ -668,102 +662,6 @@ async fn update_note_notification(
     Ok(())
 }
 
-#[tauri::command(async)]
-async fn generate_shift_schedule(
-    groups: String,
-    start_date: String,
-    days: i64,
-    state: tauri::State<'_, AppState>,
-) -> Result<String, String> {
-    let _groups: Vec<Group> = serde_json::from_str(&groups)
-        .map_err(|e| e.to_string())?;
-    
-    let start_date = DateTime::parse_from_rfc3339(&start_date)
-        .map_err(|e| e.to_string())?
-        .with_timezone(&Utc);
-
-    let mut shift_manager = state.shift_manager.lock().await;
-    let schedules = shift_manager.generate_schedule(start_date, days);
-    
-    serde_json::to_string(&schedules)
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command(async)]
-async fn validate_group_change(
-    employee_id: String,
-    new_group_id: String,
-    state: tauri::State<'_, AppState>,
-) -> Result<String, String> {
-    let shift_manager = state.shift_manager.lock().await;
-    
-    match shift_manager.validate_group_change(&employee_id, &new_group_id) {
-        Ok(_) => Ok(serde_json::json!({
-            "isValid": true,
-            "message": "Transfer edilebilir"
-        }).to_string()),
-        Err(msg) => Ok(serde_json::json!({
-            "isValid": false,
-            "message": msg
-        }).to_string())
-    }
-}
-
-#[tauri::command]
-async fn get_all_employees(state: State<'_, AppState>) -> Result<String, String> {
-    let shift_manager = state.shift_manager.lock().await;
-    let employees = shift_manager.get_all_employees();
-    serde_json::to_string(&employees).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn get_all_groups(state: State<'_, AppState>) -> Result<String, String> {
-    let shift_manager = state.shift_manager.lock().await;
-    let groups = shift_manager.get_all_groups();
-    serde_json::to_string(&groups).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn get_current_shifts(state: State<'_, AppState>) -> Result<String, String> {
-    let shift_manager = state.shift_manager.lock().await;
-    let shifts = shift_manager.get_current_shifts();
-    serde_json::to_string(&shifts).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn add_employee(
-    employee: String,
-    state: State<'_, AppState>
-) -> Result<(), String> {
-    let employee: Employee = serde_json::from_str(&employee)
-        .map_err(|e| e.to_string())?;
-    
-    let mut shift_manager = state.shift_manager.lock().await;
-    shift_manager.add_employee(employee, &state.pool).await
-}
-
-#[tauri::command]
-async fn add_group(
-    group: String,
-    state: State<'_, AppState>
-) -> Result<(), String> {
-    let group: Group = serde_json::from_str(&group)
-        .map_err(|e| e.to_string())?;
-    
-    let mut shift_manager = state.shift_manager.lock().await;
-    shift_manager.add_group(group, &state.pool).await
-}
-
-#[tauri::command]
-async fn update_employee_group(
-    employee_id: String,
-    group_id: String,
-    state: State<'_, AppState>
-) -> Result<(), String> {
-    let mut shift_manager = state.shift_manager.lock().await;
-    shift_manager.update_employee_group(&employee_id, &group_id)
-}
-
 #[tokio::main]
 async fn main() {
     let db_path = get_db_path();
@@ -782,26 +680,10 @@ async fn main() {
             return;
         }
     };
-
-    let mut shift_manager = ShiftManager::new();
-    
-    // Verileri yükle
-    if let Ok(groups) = load_groups(&pool).await {
-        for group in groups {
-            shift_manager.groups.insert(group.id.clone(), group);
-        }
-    }
-    
-    if let Ok(employees) = load_employees(&pool).await {
-        for employee in employees {
-            shift_manager.employees.insert(employee.id.clone(), employee);
-        }
-    }
     
     tauri::Builder::default()
         .manage(AppState {
             pool,
-            shift_manager: Mutex::new(shift_manager),
         })
         .invoke_handler(tauri::generate_handler![
             save_excel_data, 
@@ -825,15 +707,7 @@ async fn main() {
             add_note,
             update_note_status,
             delete_note,
-            update_note_notification,
-            generate_shift_schedule,
-            validate_group_change,
-            get_all_employees,
-            get_all_groups,
-            get_current_shifts,
-            add_employee,
-            add_group,
-            update_employee_group
+            update_note_notification
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
