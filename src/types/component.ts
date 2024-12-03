@@ -1,5 +1,7 @@
 import { LayoutConfig } from "./tab"
 
+export type EventAction = "showMessage" | "navigateTab" | "openDialog" | "executeQuery" | "setValue" | "updateCanvas"
+
 export interface ComponentProperties {
   margins?: {
     top: number
@@ -53,8 +55,8 @@ export interface ComponentProperties {
   }
   events?: {
     id: string
-    type: "submit" | "click" | "change"
-    action: "showMessage" | "navigateTab" | "openDialog" | "executeQuery" | "setValue"
+    type: string
+    action: EventAction
     targetComponent?: string
     params?: Record<string, any>
   }[]

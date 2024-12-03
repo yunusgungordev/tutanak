@@ -1,5 +1,6 @@
 import { ComponentType } from "react"
 import { ComponentProperties as BaseComponentProperties } from "@/types/component"
+import { EventAction } from './component'
 
 export type TabContent = {
   id: string
@@ -40,27 +41,12 @@ export interface Field {
   type: string
 }
 
-interface EventConfig {
-  type: string;
-  action: string;
-  params?: Record<string, any>;
-  componentId?: string;
-}
-
-export type EventAction = "showMessage" | "navigateTab" | "openDialog" | "executeQuery" | "setValue"
-
-export interface ComponentEvent {
+export type ComponentEvent = {
   id: string
-  type: "click" | "change" | "submit"
+  type: string
   action: EventAction
   targetComponent?: string
-  params?: {
-    message?: string
-    tabId?: string
-    dialogId?: string
-    query?: string
-    value?: string
-  }
+  params?: Record<string, any>
 }
 
 interface ComponentProperties extends BaseComponentProperties {

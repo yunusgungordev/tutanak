@@ -31,6 +31,9 @@ import {
   ArrowRight,
   Maximize2,
   Edit,
+  Download,
+  Trash2,
+  GripVertical,
 } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "react-hot-toast"
@@ -1042,6 +1045,9 @@ export function CreateTabDialog({
               onSelect={handleComponentSelect}
               renderComponentPreview={renderComponentPreview}
               isDialog={true}
+              onEventTrigger={(event, config) => {
+                // Olay işleyici mantığı buraya gelecek
+              }}
             />
           </div>
 
@@ -1076,6 +1082,65 @@ function renderComponentPreview(item: LayoutConfig) {
     events?.forEach(event => {
       item.properties.onEventTrigger?.(event, event);
     });
+  };
+
+  // Tablo işleyicileri
+  const handleAddColumn = () => {
+    const newHeaders = [...(item.properties.headers || []), "Yeni Sütun"];
+    const newRows = (item.properties.rows || []).map(row => [...row, ""]);
+    item.properties.headers = newHeaders;
+    item.properties.rows = newRows;
+  };
+
+  const handleAddRow = () => {
+    const newRow = Array(item.properties.headers?.length || 0).fill("");
+    item.properties.rows = [...(item.properties.rows || []), newRow];
+  };
+
+  const handleHeaderChange = (index: number, value: string) => {
+    const newHeaders = [...(item.properties.headers || [])];
+    newHeaders[index] = value;
+    item.properties.headers = newHeaders;
+  };
+
+  const handleDeleteColumn = (index: number) => {
+    const newHeaders = [...(item.properties.headers || [])];
+    newHeaders.splice(index, 1);
+    const newRows = (item.properties.rows || []).map(row => {
+      const newRow = [...row];
+      newRow.splice(index, 1);
+      return newRow;
+    });
+    item.properties.headers = newHeaders;
+    item.properties.rows = newRows;
+  };
+
+  const handleCellChange = (rowIndex: number, cellIndex: number, value: string) => {
+    const newRows = [...(item.properties.rows || [])];
+    newRows[rowIndex][cellIndex] = value;
+    item.properties.rows = newRows;
+  };
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    rowIndex: number,
+    cellIndex: number
+  ) => {
+    if (e.key === "Tab" && !e.shiftKey) {
+      e.preventDefault();
+      const nextCellIndex = cellIndex + 1;
+      if (nextCellIndex === item.properties.headers?.length) {
+        if (rowIndex === (item.properties.rows?.length || 0) - 1) {
+          handleAddRow();
+        }
+      }
+    }
+  };
+
+  const handleDeleteRow = (index: number) => {
+    const newRows = [...(item.properties.rows || [])];
+    newRows.splice(index, 1);
+    item.properties.rows = newRows;
   };
 
   switch (item.type) {
@@ -1131,42 +1196,109 @@ function renderComponentPreview(item: LayoutConfig) {
       )
     case "table":
       return (
-        <div className="h-full w-full overflow-hidden rounded-md border bg-muted/50">
-          <div className="border-b bg-muted/30 p-2">
-            <span className="text-sm font-medium">
+        <div className={tableStyles.container}>
+          <div className={tableStyles.header}>
+            <span className={tableStyles.headerTitle}>
               {item.properties.label || "Tablo"}
             </span>
+            <div className={tableStyles.toolbar}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleAddColumn}
+                className={tableStyles.toolbarButton}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Sütun Ekle
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleAddRow}
+                className={tableStyles.toolbarButton}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Satır Ekle
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className={tableStyles.toolbarButton}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Dışa Aktar
+              </Button>
+            </div>
           </div>
-          <div className="p-2">
-            <table className="w-full">
-              <thead>
+
+          <div className={tableStyles.tableWrapper}>
+            <table className={tableStyles.table}>
+              <thead className={tableStyles.thead}>
                 <tr>
-                  {(item.properties.headers || []).map(
-                    (header: string, index: number) => (
-                      <th
-                        key={index}
-                        className="border-b p-1 text-left text-sm font-medium"
-                      >
-                        {header}
-                      </th>
-                    )
-                  )}
+                  {item.properties.headers?.map((header, index) => (
+                    <th key={index} className={tableStyles.th}>
+                      <div className={tableStyles.thContent}>
+                        <GripVertical className={cn("h-4 w-4", tableStyles.dragHandle)} />
+                        <Input
+                          value={header}
+                          onChange={(e) => handleHeaderChange(index, e.target.value)}
+                          className={tableStyles.input}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteColumn(index)}
+                          className={cn("opacity-0 group-hover:opacity-100", tableStyles.toolbarButton)}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <div className={tableStyles.resizeHandle} />
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {(item.properties.rows || [[]]).map(
-                  (row: string[], rowIndex: number) => (
-                    <tr key={rowIndex}>
-                      {row.map((cell: string, cellIndex: number) => (
-                        <td key={cellIndex} className="border-b p-1 text-sm">
-                          {cell || ""}
-                        </td>
-                      ))}
-                    </tr>
-                  )
-                )}
+                {item.properties.rows?.map((row, rowIndex) => (
+                  <tr key={rowIndex} className={tableStyles.tr}>
+                    {row.map((cell, cellIndex) => (
+                      <td key={cellIndex} className={tableStyles.td}>
+                        <Input
+                          value={cell}
+                          onChange={(e) => handleCellChange(rowIndex, cellIndex, e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, rowIndex, cellIndex)}
+                          className={tableStyles.input}
+                        />
+                      </td>
+                    ))}
+                    <td className="w-10">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteRow(rowIndex)}
+                        className={cn("opacity-0 group-hover:opacity-100", tableStyles.toolbarButton)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
+          </div>
+
+          <div className={tableStyles.pagination}>
+            <span className={tableStyles.paginationText}>
+              Toplam {item.properties.rows?.length || 0} kayıt
+            </span>
+            <div className={tableStyles.paginationButtons}>
+              <Button variant="outline" size="sm" disabled>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" disabled>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )
@@ -1294,4 +1426,25 @@ const EventPanel = ({
       )}
     </div>
   )
+}
+
+const tableStyles = {
+  container: "relative bg-white rounded-lg border shadow-sm overflow-hidden",
+  header: "flex items-center justify-between px-4 py-3 border-b bg-muted/30",
+  headerTitle: "text-sm font-medium text-gray-700",
+  toolbar: "flex items-center gap-2",
+  toolbarButton: "flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors",
+  tableWrapper: "overflow-auto max-h-[500px]",
+  table: "w-full border-collapse",
+  thead: "bg-muted/50 sticky top-0 z-10",
+  th: "px-4 py-3 text-left text-xs font-medium text-gray-700 border-b select-none group",
+  thContent: "flex items-center gap-2",
+  tr: "hover:bg-muted/30 transition-colors",
+  td: "px-4 py-2 text-sm border-b border-border/50",
+  input: "w-full bg-transparent px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary rounded",
+  resizeHandle: "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 transition-colors",
+  dragHandle: "opacity-0 group-hover:opacity-100 transition-opacity",
+  pagination: "flex items-center justify-between px-4 py-3 border-t bg-muted/30",
+  paginationText: "text-sm text-muted-foreground",
+  paginationButtons: "flex items-center gap-1"
 }

@@ -15,6 +15,7 @@ interface CanvasProps {
   renderComponentPreview: (item: LayoutConfig) => React.ReactNode
   isDialog?: boolean
   onContentUpdate?: (updatedConfig: LayoutConfig) => void
+  onEventTrigger: (event: any, eventConfig: any) => void
 }
 
 const GRID_PADDING = 20
@@ -36,40 +37,6 @@ const VISIBLE_GRID = {
   padding: 20,
 }
 
-const handleEventTrigger = (event: any, eventConfig: any) => {
-  if (!eventConfig || !eventConfig.action) return;
-  
-  switch (eventConfig.action) {
-    case "showMessage":
-      toast(eventConfig.params?.message || "Mesaj");
-      break;
-    case "navigateTab":
-      if (eventConfig.params?.tabId) {
-        // Tab navigasyonu için context'e erişim ekleyin
-        const { setActiveTab, tabs } = useTabContext();
-        const targetTab = tabs.find(tab => tab.id === eventConfig.params.tabId);
-        if (targetTab) {
-          setActiveTab(targetTab);
-        }
-      }
-      break;
-    case "openDialog":
-      if (eventConfig.params?.dialogId) {
-        // Dialog açma işlemi için state yönetimi ekleyin
-        // setDialogOpen(eventConfig.params.dialogId, true);
-      }
-      break;
-    case "executeQuery":
-      if (eventConfig.params?.query) {
-        // Sorgu çalıştırma işlemi için gerekli servisi çağırın
-        // executeQuery(eventConfig.params.query);
-      }
-      break;
-    default:
-      console.warn("Bilinmeyen olay türü:", eventConfig.action);
-  }
-};
-
 export function Canvas({
   layout,
   setLayout,
@@ -78,6 +45,7 @@ export function Canvas({
   renderComponentPreview,
   isDialog = false,
   onContentUpdate,
+  onEventTrigger,
 }: CanvasProps) {
   const gridRef = useRef<HTMLDivElement>(null)
   const visibleAreaRef = useRef<HTMLDivElement>(null)
@@ -141,7 +109,7 @@ export function Canvas({
             renderComponentPreview={renderComponentPreview}
             onDelete={handleDeleteComponent}
             onContentUpdate={handleContentUpdate}
-            onEventTrigger={handleEventTrigger}
+            onEventTrigger={onEventTrigger}
             gridBounds={{
               width: VISIBLE_GRID.width,
               height: maxY,

@@ -253,17 +253,31 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
         const result = await invoke("update_tab", { tabData: updateData })
 
         if (result) {
-          setTabs((prev) =>
-            prev.map((tab) =>
-              tab.id === tabId
-                ? {
-                    ...tab,
-                    ...updateData,
-                    component: DynamicTabRenderer,
-                  }
-                : tab
-            )
+          // State'i anında güncelle
+          const updatedTabs = tabs.map((tab) =>
+            tab.id === tabId
+              ? {
+                  ...tab,
+                  ...updateData,
+                  component: DynamicTabRenderer,
+                  icon: <Layout className="h-4 w-4" />,
+                  layout: updatedLayout,
+                }
+              : tab
           )
+          
+          setTabs(updatedTabs)
+          
+          // Aktif tab'ı da güncelle
+          if (activeTab?.id === tabId) {
+            setActiveTab({
+              ...activeTab,
+              ...updateData,
+              component: DynamicTabRenderer,
+              icon: <Layout className="h-4 w-4" />,
+              layout: updatedLayout,
+            })
+          }
 
           return true
         }
