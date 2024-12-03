@@ -27,22 +27,17 @@ pub fn initialize_database() -> Result<(), String> {
         )",
         [],
     ).map_err(|e| e.to_string())?;
-    
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS groups (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            current_shift TEXT NOT NULL
-        )",
-        [],
-    ).map_err(|e| e.to_string())?;
 
+    // Templates tablosunu oluştur
     conn.execute(
-        "CREATE TABLE IF NOT EXISTS employees (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            group_id TEXT NULL,
-            FOREIGN KEY(group_id) REFERENCES groups(id)
+        "CREATE TABLE IF NOT EXISTS templates (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            note TEXT,
+            template_type TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
         )",
         [],
     ).map_err(|e| e.to_string())?;
