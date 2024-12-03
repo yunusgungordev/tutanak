@@ -3,7 +3,7 @@ import { useTabContext } from "@/contexts/tab-context"
 import { Pencil, Plus, Trash2, X } from "lucide-react"
 import { toast } from "react-hot-toast"
 
-import { Field, LayoutConfig } from "@/types/tab"
+import { Field, LayoutConfig, ComponentEvent } from "@/types/tab"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,15 +17,15 @@ import {
 
 interface DynamicComponentProps {
   config: LayoutConfig
-  fields?: Field[]
-  onContentUpdate?: (updatedConfig: LayoutConfig) => void
+  fields: Field[]
+  onEventTrigger: (event: unknown, eventConfig: ComponentEvent) => void
 }
 
-export function DynamicComponent({
+export const DynamicComponent: React.FC<DynamicComponentProps> = ({
   config,
   fields,
-  onContentUpdate,
-}: DynamicComponentProps) {
+  onEventTrigger
+}) => {
   const { setActiveTab, tabs, updateTab, activeTab, updateLayout } =
     useTabContext()
   const [isEditing, setIsEditing] = useState(false)
@@ -38,30 +38,34 @@ export function DynamicComponent({
     height: `${config.properties.height}px`,
   }
 
-  const handleEvent = (event: React.SyntheticEvent, eventType: string) => {
-    const events = config.properties.events || []
-    const matchingEvents = events.filter((e) => e.type === eventType)
-
-    matchingEvents.forEach((evt) => {
-      switch (evt.action) {
-        case "openDialog":
-          // Dialog açma işlemi
-          break
-
-        case "showMessage":
-          toast(evt.params?.message || "Mesaj")
-          break
-
-        case "navigateTab":
-          const targetTab = tabs.find((tab) => tab.id === evt.target)
-          if (targetTab) {
-            setActiveTab(targetTab)
-          }
-          break
-
-        case "executeQuery":
-          // Sorgu çalıştırma işlemi
-          break
+  const handleEvent = (event: React.SyntheticEvent, eventType: ComponentEvent['type']) => {
+    console.log('Event Type:', eventType)
+    console.log('Config Events:', config.properties.events)
+    
+    if (!config.properties.events) return
+    
+    const matchingEvents = config.properties.events.filter(e => {
+      console.log('Comparing:', e.type, eventType)
+      return e.type === eventType
+    })
+    
+    console.log('Matching Events:', matchingEvents)
+    
+    matchingEvents.forEach(evt => {
+      console.log('Event to Trigger:', {
+        id: evt.id,
+        action: evt.action,
+        params: evt.params,
+        type: eventType
+      })
+      
+      if (evt.action && typeof onEventTrigger === 'function') {
+        onEventTrigger(event, {
+          id: evt.id,
+          action: evt.action,
+          params: evt.params || {},
+          type: eventType
+        })
       }
     })
   }
@@ -155,9 +159,6 @@ export function DynamicComponent({
         layout: updatedLayout,
       })
 
-      if (onContentUpdate) {
-        onContentUpdate(updatedConfig)
-      }
       toast.success("İçerik güncellendi")
     } catch (error) {
       console.error("İçerik güncelleme hatası:", error)
@@ -276,6 +277,7 @@ export function DynamicComponent({
           <div className="h-full w-full rounded-md border bg-background shadow-sm">
             <input
               type="text"
+              value={config.properties.value || ""}
               placeholder={config.properties.placeholder}
               className="h-full w-full rounded-md px-3 py-2 ring-primary focus:outline-none focus:ring-2"
               onChange={(e) => handleEvent(e, "change")}

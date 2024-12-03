@@ -53,9 +53,9 @@ export interface ComponentProperties {
   }
   events?: {
     id: string
-    type: "click" | "change" | "submit"
-    action: "openDialog" | "showMessage" | "navigateTab" | "executeQuery"
-    target?: string
+    type: "submit" | "click" | "change"
+    action: "showMessage" | "navigateTab" | "openDialog" | "executeQuery" | "setValue"
+    targetComponent?: string
     params?: Record<string, any>
   }[]
   dependencies?: {
@@ -70,6 +70,9 @@ export interface ComponentProperties {
     completed: boolean
     createdAt: string
   }[]
+  value?: string
+  onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void
+  onEventTrigger?: (event: any, eventConfig: any) => void
 }
 
 export interface DraggableComponentType {

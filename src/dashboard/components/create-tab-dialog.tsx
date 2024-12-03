@@ -27,6 +27,10 @@ import {
   Table,
   Type,
   X,
+  MessageSquare,
+  ArrowRight,
+  Maximize2,
+  Edit,
 } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "react-hot-toast"
@@ -153,6 +157,19 @@ const COMPONENTS: DraggableComponentType[] = [
     },
   },
   {
+    id: "button",
+    type: "button",
+    label: "Buton",
+    icon: <Square className="h-4 w-4" />,
+    defaultProps: {
+      label: "Yeni Buton",
+      width: 120,
+      height: 40,
+      x: 0,
+      y: 0,
+    },
+  },
+  {
     id: "textarea",
     type: "textarea",
     label: "Çok Satırlı Metin",
@@ -191,20 +208,6 @@ const COMPONENTS: DraggableComponentType[] = [
       pageSize: 5,
       showPagination: false,
       isVisible: true,
-    },
-  },
-  {
-    id: "button",
-    type: "button",
-    label: "Düğme",
-    icon: <Square className="h-4 w-4" />,
-    defaultProps: {
-      label: "Yeni Düğme",
-      width: 120,
-      height: 40,
-      x: 0,
-      y: 0,
-      pageSize: 5,
     },
   },
   {
@@ -312,7 +315,10 @@ function PropertiesPanel({
         ...newLayout[index],
         properties: {
           ...newLayout[index].properties,
-          events: [...(newLayout[index].properties.events || []), event],
+          events: [
+            ...(newLayout[index].properties.events || []),
+            { ...event, params: event.params || {} },
+          ],
         },
       }
       setLayout(newLayout)
@@ -591,68 +597,47 @@ function PropertiesPanel({
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label>Olaylar</Label>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            addEvent({
-              id: nanoid(),
-              type: "click",
-              action: "showMessage",
-              params: { message: "Yeni mesaj" },
-            })
-          }}
-        >
-          Olay Ekle
-        </Button>
-
-        {component?.properties.events?.map((event) => (
-          <div
-            key={event.id}
-            className="flex items-center gap-2 rounded-md border p-2"
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <Label>Olaylar</Label>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              addEvent({
+                id: nanoid(),
+                type: "click",
+                action: "showMessage",
+                params: { message: "Yeni mesaj" },
+              })
+            }}
+            className="h-7 px-2"
           >
-            <Select
-              value={event.type}
-              onValueChange={(value: "click" | "change" | "submit") =>
-                updateEvent(event.id, { type: value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="click">Tıklama</SelectItem>
-                <SelectItem value="change">Değişim</SelectItem>
-                <SelectItem value="submit">Gönder</SelectItem>
-              </SelectContent>
-            </Select>
+            <Plus className="mr-1 h-3 w-3" />
+            Olay Ekle
+          </Button>
+        </div>
 
-            <Select
-              value={event.action}
-              onValueChange={(value: EventAction) =>
-                updateEvent(event.id, { action: value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="showMessage">Mesaj Göster</SelectItem>
-                <SelectItem value="navigateTab">Tab'a Git</SelectItem>
-                <SelectItem value="openDialog">Dialog Aç</SelectItem>
-                <SelectItem value="executeQuery">Sorgu Çalıştır</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        ))}
+        <div className="space-y-3">
+          {component?.properties.events?.map((event) => (
+            <EventPanel
+              key={event.id}
+              event={event}
+              onUpdate={(updates) => updateEvent(event.id, updates)}
+              onDelete={() => {
+                const newEvents = component.properties.events?.filter((e) => e.id !== event.id)
+                updateProperty("events", newEvents)
+              }}
+              availableComponents={layout.filter((item) => item.id !== selectedComponent)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
-type EventAction = "showMessage" | "navigateTab" | "openDialog" | "executeQuery"
+type EventAction = "showMessage" | "navigateTab" | "openDialog" | "executeQuery" | "setValue"
 
 const COMPONENT_CATEGORIES = [
   {
@@ -668,6 +653,20 @@ const COMPONENT_CATEGORIES = [
           label: "Yeni Metin Kutusu",
           placeholder: "Metin giriniz",
           width: 200,
+          height: 40,
+          x: 0,
+          y: 0,
+        },
+      },
+      {
+        id: "button",
+        type: "button",
+        label: "Buton",
+        description: "Tıklanabilir buton",
+        icon: <Square className="h-4 w-4" />,
+        defaultProps: {
+          label: "Yeni Buton",
+          width: 120,
           height: 40,
           x: 0,
           y: 0,
@@ -1072,6 +1071,13 @@ export function CreateTabDialog({
 }
 
 function renderComponentPreview(item: LayoutConfig) {
+  const handleEvent = (event: any, eventType: "click" | "change") => {
+    const events = item.properties.events?.filter(e => e.type === eventType);
+    events?.forEach(event => {
+      item.properties.onEventTrigger?.(event, event);
+    });
+  };
+
   switch (item.type) {
     case "input":
       return (
@@ -1079,7 +1085,7 @@ function renderComponentPreview(item: LayoutConfig) {
           type="text"
           className="w-full rounded border bg-muted/50 px-2 py-1"
           placeholder={item.properties.placeholder || "Metin giriniz"}
-          disabled
+          onChange={(e) => handleEvent(e, "change")}
         />
       )
     case "textarea":
@@ -1087,14 +1093,14 @@ function renderComponentPreview(item: LayoutConfig) {
         <textarea
           className="w-full rounded border bg-muted/50 px-2 py-1"
           placeholder={item.properties.placeholder || "Metin giriniz"}
-          disabled
+          onChange={(e) => handleEvent(e, "change")}
         />
       )
     case "select":
       return (
         <select
           className="w-full rounded border bg-muted/50 px-2 py-1"
-          disabled
+          onChange={(e) => handleEvent(e, "change")}
         >
           {item.properties.options?.map((option, index) => (
             <option key={index}>{option}</option>
@@ -1103,14 +1109,21 @@ function renderComponentPreview(item: LayoutConfig) {
       )
     case "button":
       return (
-        <Button variant="secondary" className="w-full" disabled>
+        <Button 
+          variant="secondary" 
+          className="w-full"
+          onClick={(e) => handleEvent(e, "click")}
+        >
           {item.properties.label || "Buton"}
         </Button>
       )
     case "checkbox":
       return (
         <div className="flex items-center gap-2">
-          <input type="checkbox" disabled />
+          <input 
+            type="checkbox" 
+            onChange={(e) => handleEvent(e, "change")}
+          />
           <span className="text-sm">
             {item.properties.label || "Onay Kutusu"}
           </span>
@@ -1160,4 +1173,125 @@ function renderComponentPreview(item: LayoutConfig) {
     default:
       return null
   }
+}
+
+type EventType = "click" | "submit" | "change";
+
+const EventPanel = ({
+  event,
+  onUpdate,
+  onDelete,
+  availableComponents,
+}: {
+  event: NonNullable<ComponentProperties["events"]>[number]
+  onUpdate: (updates: Partial<NonNullable<ComponentProperties["events"]>[number]>) => void
+  onDelete: () => void
+  availableComponents: LayoutConfig[]
+}) => {
+  return (
+    <div className="space-y-3 rounded-lg border p-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium">Olay Ayarları</h4>
+        <Button variant="ghost" size="icon" onClick={onDelete}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs">Tetikleyici</Label>
+        <Select 
+          value={event.type as EventType} 
+          onValueChange={(value: EventType) => onUpdate({ type: value })}
+        >
+          <SelectTrigger className="h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="click">Tıklama</SelectItem>
+            <SelectItem value="change">Değişim</SelectItem>
+            <SelectItem value="submit">Gönder</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs">Eylem</Label>
+        <Select value={event.action} onValueChange={(value) => onUpdate({ action: value as EventAction })}>
+          <SelectTrigger className="h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="showMessage">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                <span>Mesaj Göster</span>
+              </div>
+            </SelectItem>
+            <SelectItem value="navigateTab">
+              <div className="flex items-center gap-2">
+                <ArrowRight className="h-4 w-4" />
+                <span>Tab'a Git</span>
+              </div>
+            </SelectItem>
+            <SelectItem value="openDialog">
+              <div className="flex items-center gap-2">
+                <Maximize2 className="h-4 w-4" />
+                <span>Dialog Aç</span>
+              </div>
+            </SelectItem>
+            <SelectItem value="setValue">
+              <div className="flex items-center gap-2">
+                <Edit className="h-4 w-4" />
+                <span>Değer Ata</span>
+              </div>
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {event.action === "showMessage" && (
+        <div className="space-y-2">
+          <Label className="text-xs">Mesaj</Label>
+          <Input
+            value={event.params?.message || ""}
+            onChange={(e) => onUpdate({ params: { message: e.target.value } })}
+            placeholder="Gösterilecek mesaj"
+            className="h-8"
+          />
+        </div>
+      )}
+
+      {event.action === "setValue" && (
+        <div className="space-y-2">
+          <Label className="text-xs">Hedef Bileşen</Label>
+          <Select
+            value={event.targetComponent}
+            onValueChange={(value) => onUpdate({ targetComponent: value })}
+          >
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Bileşen seçin" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableComponents.map((comp) => (
+                <SelectItem key={comp.id} value={comp.id}>
+                  <div className="flex items-center gap-2">
+                    <span>{comp.type}</span>
+                    <span className="text-xs text-muted-foreground">({comp.id})</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Label className="text-xs">Atanacak Değer</Label>
+          <Input
+            value={event.params?.value || ""}
+            onChange={(e) => onUpdate({ params: { value: e.target.value } })}
+            placeholder="Değer"
+            className="h-8"
+          />
+        </div>
+      )}
+    </div>
+  )
 }

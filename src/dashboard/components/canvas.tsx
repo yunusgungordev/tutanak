@@ -4,6 +4,8 @@ import { LayoutConfig } from "@/types/tab"
 import { cn } from "@/lib/utils"
 
 import { DraggableComponent } from "./draggable-component"
+import { toast } from "react-hot-toast"
+import { useTabContext } from "@/contexts/tab-context"
 
 interface CanvasProps {
   layout: LayoutConfig[]
@@ -33,6 +35,40 @@ const VISIBLE_GRID = {
   height: 600,
   padding: 20,
 }
+
+const handleEventTrigger = (event: any, eventConfig: any) => {
+  if (!eventConfig || !eventConfig.action) return;
+  
+  switch (eventConfig.action) {
+    case "showMessage":
+      toast(eventConfig.params?.message || "Mesaj");
+      break;
+    case "navigateTab":
+      if (eventConfig.params?.tabId) {
+        // Tab navigasyonu için context'e erişim ekleyin
+        const { setActiveTab, tabs } = useTabContext();
+        const targetTab = tabs.find(tab => tab.id === eventConfig.params.tabId);
+        if (targetTab) {
+          setActiveTab(targetTab);
+        }
+      }
+      break;
+    case "openDialog":
+      if (eventConfig.params?.dialogId) {
+        // Dialog açma işlemi için state yönetimi ekleyin
+        // setDialogOpen(eventConfig.params.dialogId, true);
+      }
+      break;
+    case "executeQuery":
+      if (eventConfig.params?.query) {
+        // Sorgu çalıştırma işlemi için gerekli servisi çağırın
+        // executeQuery(eventConfig.params.query);
+      }
+      break;
+    default:
+      console.warn("Bilinmeyen olay türü:", eventConfig.action);
+  }
+};
 
 export function Canvas({
   layout,
@@ -67,6 +103,9 @@ export function Canvas({
       item.id === updatedConfig.id ? updatedConfig : item
     )
     setLayout(newLayout)
+    if (onContentUpdate) {
+      onContentUpdate(updatedConfig)
+    }
   }
 
   return (
@@ -102,6 +141,7 @@ export function Canvas({
             renderComponentPreview={renderComponentPreview}
             onDelete={handleDeleteComponent}
             onContentUpdate={handleContentUpdate}
+            onEventTrigger={handleEventTrigger}
             gridBounds={{
               width: VISIBLE_GRID.width,
               height: maxY,

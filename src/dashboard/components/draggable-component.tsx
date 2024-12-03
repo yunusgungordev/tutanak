@@ -14,9 +14,10 @@ interface DraggableComponentProps {
   renderComponentPreview: (item: LayoutConfig) => React.ReactNode
   onDelete: (id: string) => void
   onContentUpdate?: (updatedConfig: LayoutConfig) => void
+  onEventTrigger: (event: any, eventConfig: any) => void
   gridBounds: {
-    width: number
-    height: number
+    width: number | string
+    height: number | string
     padding: number
   }
 }
@@ -87,6 +88,7 @@ export function DraggableComponent({
   renderComponentPreview,
   onDelete,
   onContentUpdate,
+  onEventTrigger,
   gridBounds,
 }: DraggableComponentProps) {
   const ref = useInteractable(
@@ -120,6 +122,36 @@ export function DraggableComponent({
     }
   }
 
+  const handleComponentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelect(item.id);
+
+    const clickEvents = item.properties.events?.filter(
+      event => event.type === "click"
+    );
+
+    if (clickEvents && clickEvents.length > 0) {
+      clickEvents.forEach(event => {
+        if (typeof onEventTrigger === 'function') {
+          onEventTrigger(e, {
+            ...event,
+            componentId: item.id
+          });
+        }
+      });
+    }
+  };
+
+  const handleComponentChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    // Değişim olaylarını işle
+    const changeEvents = item.properties.events?.filter(
+      (event) => event.type === "change"
+    )
+    changeEvents?.forEach((event) => {
+      onEventTrigger(e, event)
+    })
+  }
+
   return (
     <div
       ref={ref}
@@ -132,10 +164,7 @@ export function DraggableComponent({
         cursor: "grab",
         userSelect: "none",
       }}
-      onClick={(e) => {
-        e.stopPropagation()
-        onSelect(item.id)
-      }}
+      onClick={handleComponentClick}
       className={cn(
         "group relative rounded-md bg-background shadow-sm ring-primary/50 transition-all duration-200 hover:ring-2",
         selectedComponent === item.id && "ring-2 ring-primary"
@@ -160,6 +189,11 @@ export function DraggableComponent({
       {renderComponentPreview({
         ...item,
         onContentUpdate: handleUpdate,
+        properties: {
+          ...item.properties,
+          events: item.properties.events,
+          onEventTrigger: onEventTrigger
+        }
       })}
     </div>
   )
