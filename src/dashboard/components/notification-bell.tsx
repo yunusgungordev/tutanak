@@ -25,7 +25,7 @@ export function NotificationBell() {
     const isSameDay = startOfDay(now).getTime() === startOfDay(dueDate).getTime()
     const isUpcoming = isBefore(now, dueDate)
     const isNotExpired = !isAfter(now, addDays(dueDate, 1))
-    const canNotify = !note.lastNotified || isAfter(now, addHours(note.lastNotified, 1))
+    const canNotify = !note.lastNotified || isAfter(now, addHours(new Date(note.lastNotified), 1))
 
     const isAIImportant = note.isImportant
     const hasReminder = note.reminder

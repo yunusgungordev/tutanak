@@ -9,6 +9,7 @@ export interface ComponentProperties {
   height: number;
   x: number;
   y: number;
+  rows?: string[][];
   pageSize?: number;
   
   // Text bileşeni için eklenen özellikler
@@ -22,7 +23,6 @@ export interface ComponentProperties {
   // Diğer bileşenlere ait özellikler...
   options?: string[];
   headers?: string[];
-  rows: string[][];
   striped?: boolean;
   bordered?: boolean;
   hoverable?: boolean;

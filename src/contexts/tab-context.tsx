@@ -190,8 +190,9 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
           component: DynamicTabRenderer,
           icon: <Layout className="h-4 w-4" />,
         }
-        setTabs((prev) => [...prev, newTab])
-        setActiveTab(newTab)
+        const typedNewTab = newTab as TabContent
+        setTabs((prev) => [...prev, typedNewTab])
+        setActiveTab(typedNewTab)
         return true
       }
       return false
