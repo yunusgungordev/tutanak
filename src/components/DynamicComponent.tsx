@@ -484,12 +484,10 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
     const [tableState, setTableState] = useState<TableState>({
       searchQuery: "",
       filteredRows: [],
-      originalRows: Array.isArray(config.properties?.rows) 
-        ? config.properties.rows.map((row, index) => ({
-            id: `row-${index}`,
-            cells: row,
-          }))
-        : [],
+      originalRows: (config.properties.rows || []).map((row, index) => ({
+        id: `row-${index}`,
+        cells: row
+      })),
     });
 
     const handleSearch = (value: string) => {
@@ -797,11 +795,11 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
         )
         setTableState(prev => ({
           ...prev,
-          originalRows: config.properties.rows.map((row, index) => ({
+          originalRows: (config.properties.rows || []).map((row, index) => ({
             id: `row-${index}`,
             cells: row,
           })) || [],
-          filteredRows: config.properties.rows.map((row, index) => ({
+          filteredRows: (config.properties.rows || []).map((row, index) => ({
             id: `row-${index}`,
             cells: row,
           })) || [],
