@@ -20,19 +20,23 @@ export function useInteractable(
   useEffect(() => {
     if (!elementRef.current) return
 
-    const maxWidth =
-      typeof gridBounds.width === "string"
-        ? elementRef.current.parentElement?.clientWidth || 800
-        : gridBounds.width
+    const element = elementRef.current
+    const parentElement = element.parentElement
 
-    const maxHeight =
-      typeof gridBounds.height === "string"
-        ? elementRef.current.parentElement?.clientHeight || 600
-        : gridBounds.height
+    if (!parentElement) return
 
-    const interactable = interact(elementRef.current)
+    const maxWidth = typeof gridBounds.width === "string" 
+      ? parentElement.clientWidth - gridBounds.padding * 2
+      : gridBounds.width
+
+    const maxHeight = typeof gridBounds.height === "string"
+      ? parentElement.clientHeight - gridBounds.padding * 2
+      : gridBounds.height
+
+    const interactable = interact(element)
       .draggable({
         inertia: false,
+        autoScroll: true,
         modifiers: [
           interact.modifiers.snap({
             targets: [interact.snappers.grid({ x: 10, y: 10 })],
@@ -40,13 +44,25 @@ export function useInteractable(
             relativePoints: [{ x: 0, y: 0 }],
           }),
           interact.modifiers.restrict({
-            restriction: "parent",
+            restriction: parentElement,
             elementRect: { top: 0, left: 0, bottom: 1, right: 1 },
             endOnly: true,
           }),
         ],
         listeners: {
-          move: dragMoveListener,
+          move: (event) => {
+            const target = event.target
+            const x = (parseFloat(target.getAttribute("data-x")) || 0) + event.dx
+            const y = (parseFloat(target.getAttribute("data-y")) || 0) + event.dy
+
+            // Sınırları kontrol et
+            const boundedX = Math.min(Math.max(x, 0), maxWidth - parseFloat(target.style.width))
+            const boundedY = Math.min(Math.max(y, 0), maxHeight - parseFloat(target.style.height))
+
+            target.style.transform = `translate(${boundedX}px, ${boundedY}px)`
+            target.setAttribute("data-x", boundedX.toString())
+            target.setAttribute("data-y", boundedY.toString())
+          },
           end(event) {
             const target = event.target
             const x = parseFloat(target.getAttribute("data-x")) || 0
@@ -59,8 +75,12 @@ export function useInteractable(
         edges: { left: true, right: true, bottom: true, top: true },
         modifiers: [
           interact.modifiers.restrictEdges({
-            outer: "parent",
+            outer: parentElement,
             endOnly: true,
+          }),
+          interact.modifiers.restrictSize({
+            min: { width: 50, height: 50 },
+            max: { width: maxWidth, height: maxHeight },
           }),
           interact.modifiers.snap({
             targets: [interact.snappers.grid({ x: 10, y: 10 })],
@@ -68,7 +88,23 @@ export function useInteractable(
           }),
         ],
         listeners: {
-          move: resizeMoveListener,
+          move: (event) => {
+            const target = event.target
+            let x = parseFloat(target.getAttribute("data-x")) || 0
+            let y = parseFloat(target.getAttribute("data-y")) || 0
+
+            // Boyut güncelleme
+            target.style.width = `${event.rect.width}px`
+            target.style.height = `${event.rect.height}px`
+
+            // Pozisyon güncelleme
+            x += event.deltaRect.left
+            y += event.deltaRect.top
+
+            target.style.transform = `translate(${x}px, ${y}px)`
+            target.setAttribute("data-x", x.toString())
+            target.setAttribute("data-y", y.toString())
+          },
           end(event) {
             const target = event.target
             const x = parseFloat(target.getAttribute("data-x")) || 0
@@ -84,32 +120,6 @@ export function useInteractable(
       interactable.unset()
     }
   }, [id, onDragEnd, onResizeEnd, gridBounds])
-
-  function dragMoveListener(event: any) {
-    const target = event.target
-    const x = (parseFloat(target.getAttribute("data-x")) || 0) + event.dx
-    const y = (parseFloat(target.getAttribute("data-y")) || 0) + event.dy
-
-    target.style.transform = `translate(${x}px, ${y}px)`
-    target.setAttribute("data-x", x.toString())
-    target.setAttribute("data-y", y.toString())
-  }
-
-  function resizeMoveListener(event: any) {
-    const target = event.target
-    let x = parseFloat(target.getAttribute("data-x")) || 0
-    let y = parseFloat(target.getAttribute("data-y")) || 0
-
-    target.style.width = `${event.rect.width}px`
-    target.style.height = `${event.rect.height}px`
-
-    x += event.deltaRect.left
-    y += event.deltaRect.top
-
-    target.style.transform = `translate(${x}px, ${y}px)`
-    target.setAttribute("data-x", x.toString())
-    target.setAttribute("data-y", y.toString())
-  }
 
   return elementRef
 }

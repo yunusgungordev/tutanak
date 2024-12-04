@@ -184,10 +184,14 @@ export function DraggableComponent({
         height: item.properties.height,
         transform: `translate(${item.properties.x}px, ${item.properties.y}px)`,
         touchAction: "none",
-        cursor: "grab",
+        cursor: "move",
         userSelect: "none",
+        zIndex: selectedComponent === item.id ? 1000 : 1,
       }}
-      onClick={handleComponentClick}
+      onClick={(e) => {
+        e.stopPropagation()
+        onSelect(item.id)
+      }}
       className={cn(
         "group relative rounded-md bg-background shadow-sm ring-primary/50 transition-all duration-200 hover:ring-2",
         selectedComponent === item.id && "ring-2 ring-primary"

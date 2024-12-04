@@ -51,7 +51,7 @@ export function Canvas({
   const visibleAreaRef = useRef<HTMLDivElement>(null)
 
   const handleCanvasClick = (event: React.MouseEvent) => {
-    if (event.target === gridRef.current) {
+    if (event.target === gridRef.current || event.target === visibleAreaRef.current) {
       onSelect("")
     }
   }
