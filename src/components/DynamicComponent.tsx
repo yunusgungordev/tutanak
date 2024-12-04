@@ -38,6 +38,13 @@ interface TableRow {
   cells: string[]
 }
 
+// TableState interface'i ekleyelim (line 39'dan sonra)
+interface TableState {
+  searchQuery: string;
+  filteredRows: TableRow[];
+  originalRows: TableRow[];
+}
+
 // Sürükle-bırak için yardımcı fonksiyonlar
 const reorderArray = <T,>(list: T[], startIndex: number, endIndex: number): T[] => {
   const result = Array.from(list)
@@ -368,17 +375,28 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
     rowNumber: "w-12 px-4 py-2.5 text-sm text-gray-500 border-b border-border/50 bg-muted/30 text-center font-mono sticky left-0 z-20",
     actionColumn: "w-16 px-2 py-2.5 text-center border-b border-border/50 sticky right-0 bg-white shadow-[-4px_0_8px_-2px_rgba(0,0,0,0.1)] z-20",
     deleteButton: "mx-auto flex h-7 w-7 items-center justify-center p-0 hover:bg-destructive/10 hover:text-destructive rounded-md transition-colors",
-    container: "relative bg-white rounded-md overflow-hidden",
+    container: "relative w-full",
+    header: "flex items-center justify-between px-4 py-2 bg-background border-b border-border",
+    headerTitle: "text-sm font-medium",
     resizeHandle: "absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-primary/50 transition-colors",
     headerActions: "flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 top-1/2 -translate-y-1/2",
-    toolbar: "flex items-center justify-between border-b bg-muted/30 px-4 py-2.5 sticky top-0 z-30",
-    toolbarButton: "h-8 gap-1.5 text-xs font-medium hover:bg-muted/50 transition-colors",
+    toolbar: "flex items-center justify-between gap-4 px-4 py-2 bg-muted/30",
+    toolbarButton: "gap-2 text-xs font-medium hover:bg-muted/50 transition-colors",
     dragHandle: "cursor-move opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-gray-600",
     tableContainer: "flex items-start gap-2",
     mainTable: "flex-grow overflow-x-auto shadow-sm",
     actionHeader: "px-2 py-3 text-sm font-semibold text-gray-500 border-b border-border bg-muted/50 h-[42px] flex items-center justify-center",
     actionCell: "px-2 py-2.5 border-b border-border/50 flex items-center justify-center",
     activeCell: "outline outline-2 outline-primary/50 outline-offset-[-2px] rounded-none bg-[#EDF3FF]",
+    searchContainer: "flex items-center gap-2 w-[300px]",
+    searchInput: "h-8 text-sm focus-visible:ring-1",
+    headerContainer: "flex items-center justify-between w-full gap-4 p-2",
+    headerWrapper: "border-b border-border bg-background",
+    headerContent: "flex items-center justify-between px-4 py-3",
+    rowCount: "text-sm text-muted-foreground",
+    stripedTable: "tr:nth-child(even) td { @apply bg-muted/30; }",
+    borderedTable: "th, td { @apply border border-border; }",
+    hoverableTable: "tbody tr:hover td { @apply bg-muted/50; }",
   }
 
   const renderContent = () => {
@@ -463,15 +481,49 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
   }
 
   const renderTable = () => {
-    const [rows, setRows] = useState<TableRow[]>(
-      config.properties.rows?.map((row, index) => ({
-        id: `row-${index}`,
-        cells: row,
-      })) || []
-    )
+    const [tableState, setTableState] = useState<TableState>({
+      searchQuery: "",
+      filteredRows: [],
+      originalRows: Array.isArray(config.properties?.rows) 
+        ? config.properties.rows.map((row, index) => ({
+            id: `row-${index}`,
+            cells: row,
+          }))
+        : [],
+    });
+
+    const handleSearch = (value: string) => {
+      const searchValue = value.toLowerCase();
+      const filtered = tableState.originalRows.filter((row) =>
+        row.cells.some((cell) => 
+          cell.toString().toLowerCase().includes(searchValue)
+        )
+      );
+      
+      setTableState({
+        ...tableState,
+        searchQuery: value,
+        filteredRows: filtered,
+      });
+    };
+
+    useEffect(() => {
+      const rows = config.properties?.rows || [];
+      setTableState(prev => ({
+        ...prev,
+        originalRows: rows.map((row, index) => ({
+          id: `row-${index}`,
+          cells: row,
+        })),
+        filteredRows: rows.map((row, index) => ({
+          id: `row-${index}`,
+          cells: row,
+        })),
+      }));
+    }, [config.properties?.rows]);
 
     const handleCellChange = (rowIndex: number, cellIndex: number, value: string) => {
-      const updatedRows = rows.map((row: TableRow, rIndex: number) => {
+      const updatedRows = tableState.filteredRows.map((row: TableRow, rIndex: number) => {
         if (rIndex === rowIndex) {
           const newCells = [...row.cells]
           newCells[cellIndex] = value
@@ -480,7 +532,10 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
         return row
       })
       
-      setRows(updatedRows)
+      setTableState(prev => ({
+        ...prev,
+        filteredRows: updatedRows,
+      }));
       
       if (activeTab) {
         const updatedConfig = {
@@ -510,11 +565,14 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
         setColumns(newColumns)
         
         // Satırları da güncelle
-        const newRows = rows.map(row => ({
+        const newRows = tableState.filteredRows.map(row => ({
           ...row,
           cells: reorderArray(row.cells, source.index, destination.index)
         }))
-        setRows(newRows)
+        setTableState(prev => ({
+          ...prev,
+          filteredRows: newRows,
+        }));
         
         // Canvas ve anasayfa senkronizasyonu için
         updateCanvasAndTable({
@@ -530,11 +588,14 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
 
     const handleAddRow = () => {
       const newRow = Array(columns.length).fill("")
-      const newRows = [...rows, {
-        id: `row-${rows.length}`,
+      const newRows = [...tableState.filteredRows, {
+        id: `row-${tableState.filteredRows.length}`,
         cells: newRow
       }]
-      setRows(newRows)
+      setTableState(prev => ({
+        ...prev,
+        filteredRows: newRows,
+      }));
       
       // Veritabanını güncelle
       if (activeTab) {
@@ -565,11 +626,14 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
       setColumns(newColumns)
 
       // Mevcut satırlara boş hücre ekle
-      const newRows = rows.map(row => ({
+      const newRows = tableState.filteredRows.map(row => ({
         ...row,
         cells: [...row.cells, ""]
       }))
-      setRows(newRows)
+      setTableState(prev => ({
+        ...prev,
+        filteredRows: newRows,
+      }));
 
       // Veritabanını güncelle
       if (activeTab) {
@@ -592,8 +656,11 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
     }
 
     const handleDeleteRow = (rowIndex: number) => {
-      const newRows = rows.filter((_, index) => index !== rowIndex)
-      setRows(newRows)
+      const newRows = tableState.filteredRows.filter((_, index) => index !== rowIndex)
+      setTableState(prev => ({
+        ...prev,
+        filteredRows: newRows,
+      }));
       
       // Veritabanını güncelle
       if (activeTab) {
@@ -618,11 +685,14 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
       const newColumns = columns.filter((_, index) => index !== columnIndex)
       setColumns(newColumns)
       
-      const newRows = rows.map(row => ({
+      const newRows = tableState.filteredRows.map(row => ({
         ...row,
         cells: row.cells.filter((_, index) => index !== columnIndex)
       }))
-      setRows(newRows)
+      setTableState(prev => ({
+        ...prev,
+        filteredRows: newRows,
+      }));
       
       // Canvas ve anasayfa senkronizasyonu için
       updateCanvasAndTable({
@@ -725,12 +795,17 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
             header,
           }))
         )
-        setRows(
-          config.properties.rows.map((row, index) => ({
+        setTableState(prev => ({
+          ...prev,
+          originalRows: config.properties.rows.map((row, index) => ({
             id: `row-${index}`,
             cells: row,
-          }))
-        )
+          })) || [],
+          filteredRows: config.properties.rows.map((row, index) => ({
+            id: `row-${index}`,
+            cells: row,
+          })) || [],
+        }));
       }
     }, [config.properties.headers, config.properties.rows])
 
@@ -851,86 +926,106 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
           maxWidth={1200}
           className={tableStyles.container}
         >
-          <div className={tableStyles.toolbar}>
-            <span className="text-sm font-medium text-gray-700">
-              {config.properties.label}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={handleAddRow} className={tableStyles.toolbarButton}>
-                <Plus className="h-4 w-4" />
-                Yeni Satır
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleAddColumn} className={tableStyles.toolbarButton}>
-                <Plus className="h-4 w-4" />
-                Yeni Sütun
-              </Button>
-              <input
-                type="file"
-                accept=".xlsx,.xls"
-                onChange={handleImportExcel}
-                className="hidden"
-                ref={fileInputRef}
-              />
-              <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()} className={tableStyles.toolbarButton}>
-                <Upload className="h-4 w-4" />
-                Excel İçe Aktar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleExportExcel} className={tableStyles.toolbarButton}>
-                <Download className="h-4 w-4" />
-                Excel Dışa Aktar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handlePrint} className={tableStyles.toolbarButton}>
-                <Printer className="h-4 w-4" />
-                Yazdır
-              </Button>
+          <div className={tableStyles.headerWrapper}>
+            <div className={tableStyles.headerContent}>
+              <div className="flex items-center gap-2">
+                <span className={tableStyles.headerTitle}>
+                  {config.properties.label || "Tablo"}
+                </span>
+                <span className={tableStyles.rowCount}>
+                  ({tableState.filteredRows.length} satır)
+                </span>
+              </div>
+              <div className={tableStyles.searchContainer}>
+                <Input
+                  type="search"
+                  placeholder="Tabloda ara..."
+                  value={tableState.searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className={tableStyles.searchInput}
+                />
+              </div>
+            </div>
+            <div className={tableStyles.toolbar}>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="sm" onClick={handleAddRow} className={tableStyles.toolbarButton}>
+                  <Plus className="h-4 w-4" />
+                  <span>Satır</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleAddColumn} className={tableStyles.toolbarButton}>
+                  <Plus className="h-4 w-4" />
+                  <span>Sütun</span>
+                </Button>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()} className={tableStyles.toolbarButton}>
+                  <Download className="h-4 w-4" />
+                  <span>İçe Aktar</span>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleExportExcel} className={tableStyles.toolbarButton}>
+                  <Upload className="h-4 w-4" />
+                  <span>Dışa Aktar</span>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handlePrint} className={tableStyles.toolbarButton}>
+                  <Printer className="h-4 w-4" />
+                  <span>Yazdır</span>
+                </Button>
+              </div>
             </div>
           </div>
           <div className={tableStyles.tableContainer}>
             <DragDropContext onDragEnd={handleDragEnd}>
               <div className={tableStyles.mainTable}>
-                <table className={tableStyles.table}>
-                  <Droppable droppableId="columns" direction="horizontal" type="column">
-                    {(provided) => (
-                      <thead 
-                        className={tableStyles.thead} 
-                        ref={provided.innerRef} 
-                        {...provided.droppableProps}
-                      >
-                        <tr>
-                          <th className={tableStyles.rowNumber}>#</th>
-                          {columns.map((column, index) => (
-                            <Draggable key={column.id} draggableId={column.id} index={index}>
-                              {(dragProvided) => (
-                                <th
-                                  ref={dragProvided.innerRef}
-                                  {...dragProvided.draggableProps}
-                                  className={tableStyles.th}
-                                >
-                                  <div className="relative flex items-center">
-                                    <div {...dragProvided.dragHandleProps}>
-                                      <GripVertical className={tableStyles.dragHandle} />
+                <div className={tableStyles.wrapper}>
+                  <table className={cn(tableStyles.table, {
+                    'border-separate border-spacing-0': true,
+                    [tableStyles.stripedTable]: config.properties.striped,
+                    [tableStyles.borderedTable]: config.properties.bordered,
+                    [tableStyles.hoverableTable]: config.properties.hoverable,
+                  })}>
+                    <Droppable droppableId="columns" direction="horizontal" type="column">
+                      {(provided) => (
+                        <thead 
+                          className={tableStyles.thead} 
+                          ref={provided.innerRef} 
+                          {...provided.droppableProps}
+                        >
+                          <tr>
+                            <th className={tableStyles.rowNumber}>#</th>
+                            {columns.map((column, index) => (
+                              <Draggable key={column.id} draggableId={column.id} index={index}>
+                                {(dragProvided) => (
+                                  <th
+                                    ref={dragProvided.innerRef}
+                                    {...dragProvided.draggableProps}
+                                    className={tableStyles.th}
+                                  >
+                                    <div className="relative flex items-center">
+                                      <div {...dragProvided.dragHandleProps}>
+                                        <GripVertical className={tableStyles.dragHandle} />
+                                      </div>
+                                      {renderTableHeader(column, index)}
                                     </div>
-                                    {renderTableHeader(column, index)}
-                                  </div>
-                                </th>
-                              )}
-                            </Draggable>
-                          ))}
-                          {provided.placeholder}
-                        </tr>
-                      </thead>
-                    )}
-                  </Droppable>
+                                  </th>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                          </tr>
+                        </thead>
+                      )}
+                    </Droppable>
 
-                  <Droppable droppableId="rows" type="row">
-                    {(provided) => (
-                      <tbody ref={provided.innerRef} {...provided.droppableProps}>
-                        {rows.map((row, rowIndex) => renderTableRow(row, rowIndex))}
-                        {provided.placeholder}
-                      </tbody>
-                    )}
-                  </Droppable>
-                </table>
+                    <Droppable droppableId="rows" type="row">
+                      {(provided) => (
+                        <tbody ref={provided.innerRef} {...provided.droppableProps}>
+                          {tableState.filteredRows.map((row, rowIndex) => renderTableRow(row, rowIndex))}
+                          {provided.placeholder}
+                        </tbody>
+                      )}
+                    </Droppable>
+                  </table>
+                </div>
               </div>
             </DragDropContext>
           </div>

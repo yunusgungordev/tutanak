@@ -22,7 +22,7 @@ export interface ComponentProperties {
   // Diğer bileşenlere ait özellikler...
   options?: string[];
   headers?: string[];
-  rows?: string[][];
+  rows: string[][];
   striped?: boolean;
   bordered?: boolean;
   hoverable?: boolean;
