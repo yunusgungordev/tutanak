@@ -65,25 +65,39 @@ const exportToExcel = (headers: string[], rows: string[][], fileName: string) =>
 
 const importFromExcel = (file: File): Promise<{headers: string[], rows: string[][]}> => {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
+    const reader = new FileReader();
+    
     reader.onload = (e) => {
       try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer)
-        const workbook = XLSX.read(data, { type: 'array' })
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]]
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 })
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
         
-        const headers = jsonData[0] as string[]
-        const rows = jsonData.slice(1) as string[][]
+        if (!jsonData || jsonData.length === 0) {
+          throw new Error('Geçersiz Excel dosyası');
+        }
+
+        const headers = (jsonData[0] as string[]).map(header => 
+          header?.toString() || 'Başlık'
+        );
+        const rows = (jsonData.slice(1) as string[][]).map(row =>
+          row.map(cell => cell?.toString() || '')
+        );
         
-        resolve({ headers, rows })
+        resolve({ headers, rows });
       } catch (error) {
-        reject(error)
+        reject(error);
       }
-    }
-    reader.readAsArrayBuffer(file)
-  })
-}
+    };
+
+    reader.onerror = () => {
+      reject(new Error('Dosya okuma hatası'));
+    };
+
+    reader.readAsArrayBuffer(file);
+  });
+};
 
 export const DynamicComponent: React.FC<DynamicComponentProps> = ({
   config,
@@ -867,11 +881,31 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
     }
 
     const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (!file || !activeTab) return
+      const file = e.target.files?.[0];
+      if (!file || !activeTab) return;
 
       try {
-        const { headers, rows } = await importFromExcel(file)
+        const { headers, rows } = await importFromExcel(file);
+        
+        // Mevcut tablo yapısını güncelle
+        setColumns(headers.map((header, index) => ({
+          id: `col-${index}`,
+          header,
+        })));
+
+        setTableState(prev => ({
+          ...prev,
+          originalRows: rows.map((row, index) => ({
+            id: `row-${index}`,
+            cells: row,
+          })),
+          filteredRows: rows.map((row, index) => ({
+            id: `row-${index}`,
+            cells: row,
+          })),
+        }));
+
+        // Canvas ve veritabanını güncelle
         const updatedConfig = {
           ...config,
           properties: {
@@ -879,20 +913,20 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
             headers,
             rows,
           },
+        };
+
+        await updateCanvasAndTable(updatedConfig);
+        toast.success('Excel içe aktarıldı');
+        
+        // Input'u temizle
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
         }
-
-        await updateTab(activeTab.id, {
-          ...activeTab,
-          layout: activeTab.layout?.map(item =>
-            item.id === config.id ? updatedConfig : item
-          ),
-        })
-
-        toast.success('Excel içe aktarıldı')
       } catch (error) {
-        toast.error('Excel içe aktarılırken bir hata oluştu')
+        console.error('Excel içe aktarma hatası:', error);
+        toast.error('Excel içe aktarılırken bir hata oluştu');
       }
-    }
+    };
 
     const handlePrint = useReactToPrint({
       content: () => tableRef.current,
@@ -956,7 +990,19 @@ export const DynamicComponent: React.FC<DynamicComponentProps> = ({
                 </Button>
               </div>
               <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()} className={tableStyles.toolbarButton}>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept=".xlsx,.xls"
+                  onChange={handleImportExcel}
+                />
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className={tableStyles.toolbarButton}
+                >
                   <Download className="h-4 w-4" />
                   <span>İçe Aktar</span>
                 </Button>
