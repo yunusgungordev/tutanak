@@ -258,3 +258,49 @@
     backdrop-blur-md;
   }
 }
+
+.infinite-canvas {
+  min-width: 100%;
+  min-height: 100%;
+  position: relative;
+  overflow: auto;
+}
+
+.canvas-content {
+  position: absolute;
+  min-width: 100%;
+  min-height: 100%;
+  background-size: 20px 20px;
+  background-image: radial-gradient(circle, #ddd 1px, transparent 1px);
+}
+
+.infinite-canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: auto;
+  cursor: default;
+}
+
+.infinite-canvas-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  min-width: 100%;
+  min-height: 100%;
+  background-color: var(--background);
+  transform-origin: 0 0;
+}
+
+/* Grid çizgilerinin başlangıç noktasını sabitlemek için */
+.infinite-canvas-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  background-color: rgba(0,0,0,0.1);
+}

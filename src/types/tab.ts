@@ -61,3 +61,15 @@ interface TextProperties extends BaseComponentProperties {
   color: string;
   textAlign: "left" | "center" | "right";
 }
+
+export interface KonvaComponentProps {
+  item: {
+    properties: {
+      width: number;
+      height: number;
+      headers?: string[];
+    };
+  };
+  isSelected: boolean;
+  onSelect: () => void;
+}

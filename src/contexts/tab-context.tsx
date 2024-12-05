@@ -17,18 +17,6 @@ interface TabUpdateConfig {
   fields?: Field[]
 }
 
-type ComponentProps = {
-  label: string
-  id: string
-  type: string
-  layout?: LayoutConfig[]
-  fields?: Field[]
-  database?: {
-    table_name: string
-    fields: Field[]
-  }
-}
-
 export type TabContent = {
   id: string
   type: string

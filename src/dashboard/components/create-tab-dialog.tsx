@@ -1,50 +1,30 @@
 import { useEffect, useRef, useState } from "react"
 import { useTabContext } from "@/contexts/tab-context"
-import interact from "interactjs"
 import {
-  AlignEndHorizontal,
-  AlignEndVertical,
-  AlignHorizontalJustifyCenter,
-  AlignHorizontalJustifyEnd,
-  AlignHorizontalJustifyStart,
-  AlignStartHorizontal,
-  AlignStartVertical,
-  AlignVerticalJustifyCenter,
-  AlignVerticalJustifyEnd,
-  AlignVerticalJustifyStart,
-  ArrowLeftRight,
-  ArrowUpDown,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   Database,
-  File,
   FormInput as InputIcon,
   LayoutGrid,
   ListTodo,
   Plus,
   Square,
-  Table,
   Type,
   X,
   MessageSquare,
   ArrowRight,
   Maximize2,
   Edit,
-  Download,
-  Trash2,
-  GripVertical,
+  TextIcon,
+  CheckSquare,
+  ListFilter,
 } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "react-hot-toast"
-import { Rnd } from "react-rnd"
 
-import { ComponentProperties, DraggableComponentType, FontWeight, TextAlign } from "@/types/component"
-import { Field, LayoutConfig, TabContent } from "@/types/tab"
-import { cn } from "@/lib/utils"
-import { useInteractable } from "@/hooks/use-interactable"
+import { ComponentProperties, DraggableComponentType } from "@/types/component"
+import { LayoutConfig, TabContent, Field } from "@/types/tab"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Collapsible,
   CollapsibleContent,
@@ -66,12 +46,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 
-import { Canvas } from "./canvas"
 import { DraggableComponent } from "./draggable-component"
 import { ModelPanel } from "./model-panel"
+import { CanvasKonva } from "./canvas-konva"
 
 // Sabit değerler tanımlayalım
 const GRID_PADDING = 20
@@ -79,68 +58,9 @@ const GRID_WIDTH = 800
 const GRID_HEIGHT = 600
 const GRID_SNAP = 10
 
-// Izgara yardımcı çizgileri için stil
-const gridStyle = {
-  backgroundImage: `
-    linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)
-  `,
-  backgroundSize: `${GRID_SNAP}px ${GRID_SNAP}px`,
-}
-
 // Bileşen hizalama yardımcısı
 const getSnapPosition = (value: number): number => {
   return Math.round(value / GRID_SNAP) * GRID_SNAP
-}
-
-// Bileşen pozisyonlama ve boyutlandırma için yardımcı fonksiyonlar
-const handleDragStop = (
-  { x, y }: { x: number; y: number },
-  item: LayoutConfig,
-  layout: LayoutConfig[],
-  setLayout: (layout: LayoutConfig[]) => void
-) => {
-  const newLayout = [...layout]
-  const index = newLayout.findIndex((l) => l.id === item.id)
-  if (index !== -1) {
-    newLayout[index] = {
-      ...newLayout[index],
-      properties: {
-        ...newLayout[index].properties,
-        x: getSnapPosition(x),
-        y: getSnapPosition(y),
-      },
-    }
-  }
-  setLayout(newLayout)
-}
-
-const handleResizeStop = (
-  {
-    width,
-    height,
-    x,
-    y,
-  }: { width: number; height: number; x: number; y: number },
-  item: LayoutConfig,
-  layout: LayoutConfig[],
-  setLayout: (layout: LayoutConfig[]) => void
-) => {
-  const newLayout = [...layout]
-  const index = newLayout.findIndex((l) => l.id === item.id)
-  if (index !== -1) {
-    newLayout[index] = {
-      ...newLayout[index],
-      properties: {
-        ...newLayout[index].properties,
-        width: getSnapPosition(width),
-        height: getSnapPosition(height),
-        x: getSnapPosition(x),
-        y: getSnapPosition(y),
-      },
-    }
-  }
-  setLayout(newLayout)
 }
 
 const COMPONENTS: DraggableComponentType[] = [
@@ -175,42 +95,19 @@ const COMPONENTS: DraggableComponentType[] = [
   {
     id: "textarea",
     type: "textarea",
-    label: "Çok Satırlı Metin",
-    icon: <Type className="h-4 w-4" />,
+    label: "Metin Alanı",
+    icon: <TextIcon className="h-4 w-4" />,
     defaultProps: {
-      label: "Yeni Çok Satırlı Metin",
-      placeholder: "Metin giriniz",
-      width: 300,
+      placeholder: "Çok satırlı metin giriniz",
+      width: 200,
       height: 100,
       x: 0,
       y: 0,
-      pageSize: 5,
-    },
-  },
-  {
-    id: "table",
-    type: "table",
-    label: "Tablo",
-    icon: <Table className="h-4 w-4" />,
-    defaultProps: {
-      label: "Yeni Tablo",
-      width: 400,
-      height: 200,
-      x: 0,
-      y: 0,
-      headers: ["Başlık 1", "Başlık 2", "Başlık 3"],
-      rows: [
-        ["", "", ""],
-        ["", "", ""],
-      ],
-      striped: true,
-      bordered: true,
-      hoverable: true,
-      sortable: false,
-      resizable: true,
-      pageSize: 5,
-      showPagination: false,
-      isVisible: true,
+      minWidth: 100,
+      minHeight: 50,
+      maxWidth: 800,
+      maxHeight: 400,
+      resize: 'both'
     },
   },
   {
@@ -261,41 +158,36 @@ const COMPONENTS: DraggableComponentType[] = [
       y: 0,
     },
   },
+  {
+    id: "checkbox",
+    type: "checkbox",
+    label: "Onay Kutusu",
+    icon: <CheckSquare className="h-4 w-4" />,
+    defaultProps: {
+      label: "Yeni Onay Kutusu",
+      width: 150,
+      height: 24,
+      x: 0,
+      y: 0,
+      value: false
+    },
+  },
+  {
+    id: "select",
+    type: "select",
+    label: "Seçim Kutusu",
+    icon: <ListFilter className="h-4 w-4" />,
+    defaultProps: {
+      placeholder: "Seçiniz",
+      width: 200,
+      height: 40,
+      x: 0,
+      y: 0,
+      options: ["Seçenek 1", "Seçenek 2", "Seçenek 3"],
+      value: ""
+    },
+  },
 ]
-
-// Component açıklamalarını getiren yardımcı fonksiyon
-function getComponentDescription(type: string): string {
-  switch (type) {
-    case "input":
-      return "Tek satırlık metin girişi"
-    case "textarea":
-      return "Çok satırlı metin girişi"
-    case "select":
-      return "Açılır liste seçimi"
-    case "button":
-      return "Tıklanabilir düğme"
-    case "table":
-      return "Veri tablosu"
-    case "checkbox":
-      return "Onay kutusu"
-    case "text":
-      return "Özelleştirilebilir metin"
-    default:
-      return ""
-  }
-}
-
-// Hizalama türleri için enum
-enum AlignmentType {
-  LEFT = "left",
-  CENTER = "center",
-  RIGHT = "right",
-  TOP = "top",
-  MIDDLE = "middle",
-  BOTTOM = "bottom",
-  DISTRIBUTE_HORIZONTAL = "distribute-h",
-  DISTRIBUTE_VERTICAL = "distribute-v",
-}
 
 // PropertiesPanel bileşeni
 function PropertiesPanel({
@@ -376,7 +268,7 @@ function PropertiesPanel({
     <div className="space-y-4 overflow-y-auto p-4">
       <div className="font-medium">Özellikler</div>
 
-      {/* Tüm bileşenler için ortak özellikler */}
+      {/* Tm bileşenler için ortak özellikler */}
       <div className="space-y-2">
         <Label>Etiket</Label>
         <Input
@@ -488,138 +380,6 @@ function PropertiesPanel({
             placeholder="İçerik giriniz"
             className="min-h-[200px]"
           />
-        </div>
-      )}
-
-      {component.type === "table" && (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Tablo Başlıkları</Label>
-            <div className="space-y-2">
-              {(component.properties.headers || []).map(
-                (header: string, index: number) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      value={header}
-                      onChange={(e) => {
-                        const newHeaders = [
-                          ...(component.properties.headers || []),
-                        ]
-                        newHeaders[index] = e.target.value
-                        updateProperty("headers", newHeaders)
-                      }}
-                      placeholder={`Başlık ${index + 1}`}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        const newHeaders = [
-                          ...(component.properties.headers || []),
-                        ]
-                        newHeaders.splice(index, 1)
-                        updateProperty("headers", newHeaders)
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const newHeaders = [
-                    ...(component.properties.headers || []),
-                    "",
-                  ]
-                  updateProperty("headers", newHeaders)
-                }}
-              >
-                Başlık Ekle
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Tablo Özellikleri</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={component.properties.striped}
-                  onCheckedChange={(checked) =>
-                    updateProperty("striped", checked === true)
-                  }
-                />
-                <span className="text-sm">Zebra Desenli</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={component.properties.bordered}
-                  onCheckedChange={(checked) =>
-                    updateProperty("bordered", checked === true)
-                  }
-                />
-                <span className="text-sm">Kenarlıklar</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={component.properties.hoverable}
-                  onCheckedChange={(checked) =>
-                    updateProperty("hoverable", checked === true)
-                  }
-                />
-                <span className="text-sm">Hover Efekti</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={component.properties.sortable}
-                  onCheckedChange={(checked) =>
-                    updateProperty("sortable", checked === true)
-                  }
-                />
-                <span className="text-sm">Sıralanabilir</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Sayfalama</Label>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={component.properties.showPagination}
-                  onCheckedChange={(checked) =>
-                    updateProperty("showPagination", checked === true)
-                  }
-                />
-                <span className="text-sm">Sayfalama Göster</span>
-              </div>
-              {component.properties.showPagination && (
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm">Sayfa Başına Satır:</Label>
-                  <Select
-                    value={(component.properties.pageSize || 5).toString()}
-                    onValueChange={(value) =>
-                      updateProperty("pageSize", parseInt(value))
-                    }
-                  >
-                    <SelectTrigger className="w-20">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[5, 10, 15, 20].map((size) => (
-                        <SelectItem key={size} value={size.toString()}>
-                          {size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       )}
 
@@ -782,6 +542,7 @@ const COMPONENT_CATEGORIES = [
         description: "Özelleştirilebilir metin alanı",
         icon: <Type className="h-4 w-4" />,
         defaultProps: COMPONENTS.find(c => c.id === "text")!.defaultProps,
+        properties: COMPONENTS.find(c => c.id === "text")!.defaultProps
       },
       {
         id: "input",
@@ -790,6 +551,7 @@ const COMPONENT_CATEGORIES = [
         description: "Tek satırlık metin girişi",
         icon: <InputIcon className="h-4 w-4" />,
         defaultProps: COMPONENTS.find(c => c.id === "input")!.defaultProps,
+        properties: COMPONENTS.find(c => c.id === "input")!.defaultProps
       },
       {
         id: "textarea",
@@ -798,8 +560,9 @@ const COMPONENT_CATEGORIES = [
         description: "Çok satırlı metin girişi",
         icon: <Type className="h-4 w-4" />,
         defaultProps: COMPONENTS.find(c => c.id === "textarea")!.defaultProps,
+        properties: COMPONENTS.find(c => c.id === "textarea")!.defaultProps
       },
-    ],
+    ]
   },
   {
     title: "Form Bileşenleri",
@@ -811,6 +574,7 @@ const COMPONENT_CATEGORIES = [
         description: "Açılır liste seçimi",
         icon: <ListTodo className="h-4 w-4" />,
         defaultProps: COMPONENTS.find(c => c.id === "select")!.defaultProps,
+        properties: COMPONENTS.find(c => c.id === "select")!.defaultProps
       },
       {
         id: "checkbox",
@@ -819,6 +583,7 @@ const COMPONENT_CATEGORIES = [
         description: "Onay kutusu",
         icon: <Square className="h-4 w-4" />,
         defaultProps: COMPONENTS.find(c => c.id === "checkbox")!.defaultProps,
+        properties: COMPONENTS.find(c => c.id === "checkbox")!.defaultProps
       },
       {
         id: "button",
@@ -827,22 +592,10 @@ const COMPONENT_CATEGORIES = [
         description: "Tıklanabilir düğme",
         icon: <Square className="h-4 w-4" />,
         defaultProps: COMPONENTS.find(c => c.id === "button")!.defaultProps,
+        properties: COMPONENTS.find(c => c.id === "button")!.defaultProps
       },
-    ],
-  },
-  {
-    title: "Veri Bileşenleri",
-    components: [
-      {
-        id: "table",
-        type: "table",
-        label: "Tablo",
-        description: "Veri tablosu",
-        icon: <Table className="h-4 w-4" />,
-        defaultProps: COMPONENTS.find(c => c.id === "table")!.defaultProps,
-      },
-    ],
-  },
+    ]
+  }
 ]
 
 export function CreateTabDialog({
@@ -899,35 +652,6 @@ export function CreateTabDialog({
     })
   }
 
-  // Otomatik pozisyon bulma
-  const findSafePosition = (newItem: any) => {
-    let position = { x: 20, y: 20 }
-    const gridSize = 20
-
-    while (
-      checkCollision(
-        { ...newItem, properties: { ...newItem.properties, ...position } },
-        layout
-      )
-    ) {
-      position.x += gridSize
-      if (position.x > 800) {
-        // Canvas genişliği
-        position.x = 20
-        position.y += gridSize
-      }
-    }
-
-    return position
-  }
-
-  // Canvas'a tıklandığında seçimi temizle
-  const handleCanvasClick = (event: React.MouseEvent) => {
-    if (event.target === gridRef.current) {
-      setSelectedComponent(null)
-    }
-  }
-
   // Bileşen ekleme işlemi güncellenmesi
   const handleAddComponent = (component: DraggableComponentType) => {
     const newLayoutItem: LayoutConfig = {
@@ -935,7 +659,8 @@ export function CreateTabDialog({
       type: component.type,
       properties: {
         ...component.defaultProps,
-        ...findSafePosition(component),
+        x: 20,
+        y: 20,
       },
     }
     setLayout((prev) => [...prev, newLayoutItem])
@@ -977,70 +702,9 @@ export function CreateTabDialog({
     }
   }
 
-  const handleComponentSelect = (id: string) => {
+  const handleComponentSelect = (id: string | null) => {
     setSelectedComponent(id)
   }
-
-  const handleAlignComponent = (
-    alignment: "left" | "center" | "right" | "top" | "middle" | "bottom"
-  ) => {
-    if (!selectedComponent) return
-
-    const newLayout = [...layout]
-    const itemIndex = newLayout.findIndex(
-      (item) => item.id === selectedComponent
-    )
-
-    if (itemIndex === -1) return
-
-    const item = newLayout[itemIndex]
-
-    switch (alignment) {
-      case "left":
-        item.properties.x = GRID_PADDING
-        break
-
-      case "center":
-        item.properties.x = (GRID_WIDTH - item.properties.width) / 2
-        break
-
-      case "right":
-        item.properties.x = GRID_WIDTH - item.properties.width - GRID_PADDING
-        break
-
-      case "top":
-        item.properties.y = GRID_PADDING
-        break
-
-      case "middle":
-        item.properties.y = (GRID_HEIGHT - item.properties.height) / 2
-        break
-
-      case "bottom":
-        item.properties.y = GRID_HEIGHT - item.properties.height - GRID_PADDING
-        break
-    }
-
-    setLayout(newLayout)
-  }
-
-  const handleUpdateLayout = (newLayout: LayoutConfig[]) => {
-    setLayout(newLayout)
-    if (selectedComponent && tabToEdit) {
-      updateTab(tabToEdit.id, { layout: newLayout })
-    }
-  }
-
-  const handleUpdateFields = (newFields: Field[]) => {
-    setFields(newFields)
-    if (selectedComponent && tabToEdit) {
-      updateTab(tabToEdit.id, { fields: newFields })
-    }
-  }
-
-  useEffect(() => {
-    // Pozisyon ve boyutlandırma gibi durumları izleyin
-  }, [layout]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1129,26 +793,11 @@ export function CreateTabDialog({
                         </h3>
                         <div className="grid grid-cols-1 gap-2">
                           {category.components.map((component) => (
-                            <div
+                            <DraggableComponent
                               key={component.id}
-                              onClick={() => handleAddComponent(component)}
-                              className="group relative flex cursor-pointer items-center gap-2 rounded-lg border border-border/50 p-3 transition-colors hover:border-primary/50 hover:bg-accent"
-                            >
-                              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">
-                                {component.icon}
-                              </div>
-                              <div className="flex-1">
-                                <div className="font-medium">
-                                  {component.label}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {component.description}
-                                </div>
-                              </div>
-                              <div className="opacity-0 transition-opacity group-hover:opacity-100">
-                                <Plus className="h-4 w-4" />
-                              </div>
-                            </div>
+                              component={component}
+                              onAddComponent={handleAddComponent}
+                            />
                           ))}
                         </div>
                       </div>
@@ -1169,7 +818,7 @@ export function CreateTabDialog({
                 <li>• Bileşenleri seçerek özelliklerini düzenleyebilirsiniz</li>
               </ul>
             </div>
-            <Canvas
+            <CanvasKonva
               layout={layout}
               setLayout={setLayout}
               selectedComponent={selectedComponent}
@@ -1177,7 +826,7 @@ export function CreateTabDialog({
               renderComponentPreview={(item) => renderComponentPreview(item, layout, setLayout)}
               isDialog={true}
               onEventTrigger={(event, config) => {
-                // Olay işleyici mantığı buraya gelecek
+                // Olay işleyici mantığı
               }}
             />
           </div>
@@ -1212,79 +861,11 @@ function renderComponentPreview(
   layout: LayoutConfig[],
   setLayout: (layout: LayoutConfig[]) => void
 ) {
-  const updateProperty = <K extends keyof ComponentProperties>(
-    key: K,
-    value: ComponentProperties[K]
-  ) => {
-    if (item.properties) {
-      item.properties[key] = value;
-    }
-  };
-
   const handleEvent = (event: any, eventType: "click" | "change") => {
     const events = item.properties.events?.filter(e => e.type === eventType);
     events?.forEach(event => {
       item.properties.onEventTrigger?.(event, event);
     });
-  };
-
-  // Tablo işleyicileri
-  const handleAddColumn = () => {
-    const newHeaders = [...(item.properties.headers || []), "Yeni Sütun"];
-    const newRows = (item.properties.rows || []).map(row => [...row, ""]);
-    item.properties.headers = newHeaders;
-    item.properties.rows = newRows;
-  };
-
-  const handleAddRow = () => {
-    const newRow = Array(item.properties.headers?.length || 0).fill("");
-    item.properties.rows = [...(item.properties.rows || []), newRow];
-  };
-
-  const handleHeaderChange = (index: number, value: string) => {
-    const newHeaders = [...(item.properties.headers || [])];
-    newHeaders[index] = value;
-    item.properties.headers = newHeaders;
-  };
-
-  const handleDeleteColumn = (index: number) => {
-    const newHeaders = [...(item.properties.headers || [])];
-    newHeaders.splice(index, 1);
-    const newRows = (item.properties.rows || []).map(row => {
-      const newRow = [...row];
-      newRow.splice(index, 1);
-      return newRow;
-    });
-    item.properties.headers = newHeaders;
-    item.properties.rows = newRows;
-  };
-
-  const handleCellChange = (rowIndex: number, cellIndex: number, value: string) => {
-    const newRows = [...(item.properties.rows || [])];
-    newRows[rowIndex][cellIndex] = value;
-    item.properties.rows = newRows;
-  };
-
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    rowIndex: number,
-    cellIndex: number
-  ) => {
-    if (e.key === "Tab" && !e.shiftKey) {
-      e.preventDefault();
-      const nextCellIndex = cellIndex + 1;
-      if (nextCellIndex === item.properties.headers?.length) {
-        if (rowIndex === (item.properties.rows?.length || 0) - 1) {
-          handleAddRow();
-        }
-      }
-    }
-  };
-
-  const handleDeleteRow = (index: number) => {
-    const newRows = [...(item.properties.rows || [])];
-    newRows.splice(index, 1);
-    item.properties.rows = newRows;
   };
 
   switch (item.type) {
@@ -1336,114 +917,6 @@ function renderComponentPreview(
           <span className="text-sm">
             {item.properties.label || "Onay Kutusu"}
           </span>
-        </div>
-      )
-    case "table":
-      return (
-        <div className={tableStyles.container}>
-          <div className={tableStyles.header}>
-            <span className={tableStyles.headerTitle}>
-              {item.properties.label || "Tablo"}
-            </span>
-            <div className={tableStyles.toolbar}>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleAddColumn}
-                className={tableStyles.toolbarButton}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Sütun Ekle
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleAddRow}
-                className={tableStyles.toolbarButton}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Satır Ekle
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                className={tableStyles.toolbarButton}
-              >
-                <Download className="h-3.5 w-3.5" />
-                Dışa Aktar
-              </Button>
-            </div>
-          </div>
-
-          <div className={tableStyles.tableWrapper}>
-            <table className={tableStyles.table}>
-              <thead className={tableStyles.thead}>
-                <tr>
-                  {item.properties.headers?.map((header, index) => (
-                    <th key={index} className={tableStyles.th}>
-                      <div className={tableStyles.thContent}>
-                        <GripVertical className={cn("h-4 w-4", tableStyles.dragHandle)} />
-                        <Input
-                          value={header}
-                          onChange={(e) => handleHeaderChange(index, e.target.value)}
-                          className={tableStyles.input}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteColumn(index)}
-                          className={cn("opacity-0 group-hover:opacity-100", tableStyles.toolbarButton)}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                      <div className={tableStyles.resizeHandle} />
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {item.properties.rows?.map((row, rowIndex) => (
-                  <tr key={rowIndex} className={tableStyles.tr}>
-                    {row.map((cell, cellIndex) => (
-                      <td key={cellIndex} className={tableStyles.td}>
-                        <Input
-                          value={cell}
-                          onChange={(e) => handleCellChange(rowIndex, cellIndex, e.target.value)}
-                          onKeyDown={(e) => handleKeyDown(e, rowIndex, cellIndex)}
-                          className={tableStyles.input}
-                        />
-                      </td>
-                    ))}
-                    <td className="w-10">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteRow(rowIndex)}
-                        className={cn("opacity-0 group-hover:opacity-100", tableStyles.toolbarButton)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className={tableStyles.pagination}>
-            <span className={tableStyles.paginationText}>
-              Toplam {item.properties.rows?.length || 0} kayıt
-            </span>
-            <div className={tableStyles.paginationButtons}>
-              <Button variant="outline" size="sm" disabled>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" disabled>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
         </div>
       )
     case "text":
@@ -1589,25 +1062,4 @@ const EventPanel = ({
       )}
     </div>
   )
-}
-
-const tableStyles = {
-  container: "relative bg-white rounded-lg border shadow-sm overflow-hidden",
-  header: "flex items-center justify-between px-4 py-3 border-b bg-muted/30",
-  headerTitle: "text-sm font-medium text-gray-700",
-  toolbar: "flex items-center gap-2",
-  toolbarButton: "flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors",
-  tableWrapper: "overflow-auto max-h-[500px]",
-  table: "w-full border-collapse",
-  thead: "bg-muted/50 sticky top-0 z-10",
-  th: "px-4 py-3 text-left text-xs font-medium text-gray-700 border-b select-none group",
-  thContent: "flex items-center gap-2",
-  tr: "hover:bg-muted/30 transition-colors",
-  td: "px-4 py-2 text-sm border-b border-border/50",
-  input: "w-full bg-transparent px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-primary rounded",
-  resizeHandle: "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/50 transition-colors",
-  dragHandle: "opacity-0 group-hover:opacity-100 transition-opacity",
-  pagination: "flex items-center justify-between px-4 py-3 border-t bg-muted/30",
-  paginationText: "text-sm text-muted-foreground",
-  paginationButtons: "flex items-center gap-1"
 }

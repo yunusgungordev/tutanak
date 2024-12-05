@@ -44,7 +44,19 @@ export interface ComponentProperties {
     params?: Record<string, any>;
   }[];
   onEventTrigger?: (event: any, eventConfig: any) => void;
-  value?: string;
+  value?: string | boolean;
+  rotation?: number;
+  
+  cols?: number;
+  minHeight?: number;
+  maxHeight?: number;
+  resize?: 'none' | 'both' | 'horizontal' | 'vertical';
+  
+  // Ortak özellikler
+  defaultWidth?: number;
+  defaultHeight?: number;
+  minWidth?: number;
+  maxWidth?: number;
 }
 
 export interface DraggableComponentType {
